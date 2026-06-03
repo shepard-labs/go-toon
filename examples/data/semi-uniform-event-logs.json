@@ -1,0 +1,789 @@
+{
+  "logs": [
+    {
+      "id": 1,
+      "timestamp": "2025-10-01T00:07:00Z",
+      "level": "error",
+      "service": "notification-service",
+      "message": "Request received",
+      "requestId": "68b2b4a36e24be47"
+    },
+    {
+      "id": 2,
+      "timestamp": "2025-10-01T00:14:00Z",
+      "level": "info",
+      "service": "search-service",
+      "message": "Cache miss",
+      "requestId": "efac6513d807db13",
+      "error": {
+        "code": "E_RATE_LIMITED",
+        "message": "Operation failed: background job completed",
+        "stack": "at handler (/app/analytics-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 3,
+      "timestamp": "2025-10-01T00:21:00Z",
+      "level": "debug",
+      "service": "auth-service",
+      "message": "Connection established",
+      "requestId": "fb96da33ebbc6a0b"
+    },
+    {
+      "id": 4,
+      "timestamp": "2025-10-01T00:28:00Z",
+      "level": "info",
+      "service": "user-service",
+      "message": "Database query executed",
+      "requestId": "7ccb74240f26a9aa",
+      "error": {
+        "code": "E_CONFLICT",
+        "message": "Operation failed: background job completed",
+        "stack": "at handler (/app/user-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 5,
+      "timestamp": "2025-10-01T00:35:00Z",
+      "level": "warn",
+      "service": "analytics-service",
+      "message": "Connection established",
+      "requestId": "2dd1b2aeb4bab8aa"
+    },
+    {
+      "id": 6,
+      "timestamp": "2025-10-01T00:42:00Z",
+      "level": "debug",
+      "service": "inventory-service",
+      "message": "Connection established",
+      "requestId": "bec1f5dd429cd9ea",
+      "error": {
+        "code": "E_CONFLICT",
+        "message": "Operation failed: health check passed",
+        "stack": "at handler (/app/notification-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 7,
+      "timestamp": "2025-10-01T00:49:00Z",
+      "level": "warn",
+      "service": "user-service",
+      "message": "Cache miss",
+      "requestId": "802488cbc5e6e55f"
+    },
+    {
+      "id": 8,
+      "timestamp": "2025-10-01T00:56:00Z",
+      "level": "error",
+      "service": "notification-service",
+      "message": "Request received",
+      "requestId": "5f6472cdcabed7b4",
+      "error": {
+        "code": "E_CONFLICT",
+        "message": "Operation failed: background job completed",
+        "stack": "at handler (/app/user-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 9,
+      "timestamp": "2025-10-01T01:03:00Z",
+      "level": "warn",
+      "service": "user-service",
+      "message": "Request received",
+      "requestId": "dda42885cfc435cf"
+    },
+    {
+      "id": 10,
+      "timestamp": "2025-10-01T01:10:00Z",
+      "level": "error",
+      "service": "api-gateway",
+      "message": "Configuration reloaded",
+      "requestId": "055cca4df1927092",
+      "error": {
+        "code": "E_CONFLICT",
+        "message": "Operation failed: health check passed",
+        "stack": "at handler (/app/user-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 11,
+      "timestamp": "2025-10-01T01:17:00Z",
+      "level": "info",
+      "service": "auth-service",
+      "message": "Health check passed",
+      "requestId": "edc32e4947bd60eb"
+    },
+    {
+      "id": 12,
+      "timestamp": "2025-10-01T01:24:00Z",
+      "level": "warn",
+      "service": "analytics-service",
+      "message": "Configuration reloaded",
+      "requestId": "c7a17983c0bff1ea",
+      "error": {
+        "code": "E_INTERNAL",
+        "message": "Operation failed: database query executed",
+        "stack": "at handler (/app/payment-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 13,
+      "timestamp": "2025-10-01T01:31:00Z",
+      "level": "error",
+      "service": "payment-service",
+      "message": "Connection established",
+      "requestId": "f6d5cac299422add"
+    },
+    {
+      "id": 14,
+      "timestamp": "2025-10-01T01:38:00Z",
+      "level": "warn",
+      "service": "search-service",
+      "message": "Configuration reloaded",
+      "requestId": "0a6dce1b3d3efcdc",
+      "error": {
+        "code": "E_NOT_FOUND",
+        "message": "Operation failed: connection established",
+        "stack": "at handler (/app/notification-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 15,
+      "timestamp": "2025-10-01T01:45:00Z",
+      "level": "debug",
+      "service": "user-service",
+      "message": "Background job completed",
+      "requestId": "5ad1ae3fd8ec7d3f"
+    },
+    {
+      "id": 16,
+      "timestamp": "2025-10-01T01:52:00Z",
+      "level": "info",
+      "service": "payment-service",
+      "message": "Connection established",
+      "requestId": "c1b256abc2cf6306",
+      "error": {
+        "code": "E_UNAVAILABLE",
+        "message": "Operation failed: request received",
+        "stack": "at handler (/app/auth-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 17,
+      "timestamp": "2025-10-01T01:59:00Z",
+      "level": "debug",
+      "service": "analytics-service",
+      "message": "Health check passed",
+      "requestId": "03b7dc3cffe4b978"
+    },
+    {
+      "id": 18,
+      "timestamp": "2025-10-01T02:06:00Z",
+      "level": "info",
+      "service": "auth-service",
+      "message": "Connection established",
+      "requestId": "f87abe0ce74fedbf",
+      "error": {
+        "code": "E_NOT_FOUND",
+        "message": "Operation failed: cache miss",
+        "stack": "at handler (/app/search-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 19,
+      "timestamp": "2025-10-01T02:13:00Z",
+      "level": "error",
+      "service": "search-service",
+      "message": "Health check passed",
+      "requestId": "d4956a228a4323b6"
+    },
+    {
+      "id": 20,
+      "timestamp": "2025-10-01T02:20:00Z",
+      "level": "info",
+      "service": "notification-service",
+      "message": "Database query executed",
+      "requestId": "96d0f110a7c5bd3c",
+      "error": {
+        "code": "E_UNAVAILABLE",
+        "message": "Operation failed: cache miss",
+        "stack": "at handler (/app/auth-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 21,
+      "timestamp": "2025-10-01T02:27:00Z",
+      "level": "info",
+      "service": "notification-service",
+      "message": "Background job completed",
+      "requestId": "f1d90302fe3c0295"
+    },
+    {
+      "id": 22,
+      "timestamp": "2025-10-01T02:34:00Z",
+      "level": "debug",
+      "service": "analytics-service",
+      "message": "Cache miss",
+      "requestId": "e7e6fd52c94b39cb",
+      "error": {
+        "code": "E_INTERNAL",
+        "message": "Operation failed: request received",
+        "stack": "at handler (/app/inventory-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 23,
+      "timestamp": "2025-10-01T02:41:00Z",
+      "level": "info",
+      "service": "inventory-service",
+      "message": "Cache miss",
+      "requestId": "6ab6cbd0d4d2f417"
+    },
+    {
+      "id": 24,
+      "timestamp": "2025-10-01T02:48:00Z",
+      "level": "debug",
+      "service": "inventory-service",
+      "message": "Cache miss",
+      "requestId": "568f531a794d012c",
+      "error": {
+        "code": "E_NOT_FOUND",
+        "message": "Operation failed: request received",
+        "stack": "at handler (/app/api-gateway.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 25,
+      "timestamp": "2025-10-01T02:55:00Z",
+      "level": "error",
+      "service": "inventory-service",
+      "message": "Request received",
+      "requestId": "00fdadb0fe16adac"
+    },
+    {
+      "id": 26,
+      "timestamp": "2025-10-01T03:02:00Z",
+      "level": "warn",
+      "service": "search-service",
+      "message": "Connection established",
+      "requestId": "d6056bc73116fbea",
+      "error": {
+        "code": "E_RATE_LIMITED",
+        "message": "Operation failed: database query executed",
+        "stack": "at handler (/app/inventory-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 27,
+      "timestamp": "2025-10-01T03:09:00Z",
+      "level": "info",
+      "service": "notification-service",
+      "message": "Background job completed",
+      "requestId": "2b0d3b6a5554468b"
+    },
+    {
+      "id": 28,
+      "timestamp": "2025-10-01T03:16:00Z",
+      "level": "warn",
+      "service": "payment-service",
+      "message": "Cache miss",
+      "requestId": "6e7beec178f3eef2",
+      "error": {
+        "code": "E_INTERNAL",
+        "message": "Operation failed: background job completed",
+        "stack": "at handler (/app/search-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 29,
+      "timestamp": "2025-10-01T03:23:00Z",
+      "level": "error",
+      "service": "inventory-service",
+      "message": "Health check passed",
+      "requestId": "8dc0b9f4aa8ca0c9"
+    },
+    {
+      "id": 30,
+      "timestamp": "2025-10-01T03:30:00Z",
+      "level": "error",
+      "service": "payment-service",
+      "message": "Request received",
+      "requestId": "af1b76407c1fbf1d",
+      "error": {
+        "code": "E_NOT_FOUND",
+        "message": "Operation failed: health check passed",
+        "stack": "at handler (/app/inventory-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 31,
+      "timestamp": "2025-10-01T03:37:00Z",
+      "level": "debug",
+      "service": "search-service",
+      "message": "Database query executed",
+      "requestId": "71ec3ed8c59f7e22"
+    },
+    {
+      "id": 32,
+      "timestamp": "2025-10-01T03:44:00Z",
+      "level": "info",
+      "service": "notification-service",
+      "message": "Database query executed",
+      "requestId": "bc0bce65ff60eabb",
+      "error": {
+        "code": "E_UNAVAILABLE",
+        "message": "Operation failed: database query executed",
+        "stack": "at handler (/app/search-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 33,
+      "timestamp": "2025-10-01T03:51:00Z",
+      "level": "debug",
+      "service": "search-service",
+      "message": "Cache miss",
+      "requestId": "863bcaea14b8116f"
+    },
+    {
+      "id": 34,
+      "timestamp": "2025-10-01T03:58:00Z",
+      "level": "info",
+      "service": "analytics-service",
+      "message": "Database query executed",
+      "requestId": "3ddaaf1fc8487d88",
+      "error": {
+        "code": "E_UNAVAILABLE",
+        "message": "Operation failed: connection established",
+        "stack": "at handler (/app/user-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 35,
+      "timestamp": "2025-10-01T04:05:00Z",
+      "level": "info",
+      "service": "search-service",
+      "message": "Connection established",
+      "requestId": "fcde461414c8bfa5"
+    },
+    {
+      "id": 36,
+      "timestamp": "2025-10-01T04:12:00Z",
+      "level": "debug",
+      "service": "search-service",
+      "message": "Cache miss",
+      "requestId": "d90dbda7bfcef805",
+      "error": {
+        "code": "E_UNAVAILABLE",
+        "message": "Operation failed: connection established",
+        "stack": "at handler (/app/inventory-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 37,
+      "timestamp": "2025-10-01T04:19:00Z",
+      "level": "info",
+      "service": "api-gateway",
+      "message": "Database query executed",
+      "requestId": "bd85e00bd986abc7"
+    },
+    {
+      "id": 38,
+      "timestamp": "2025-10-01T04:26:00Z",
+      "level": "debug",
+      "service": "notification-service",
+      "message": "Database query executed",
+      "requestId": "d89addc1303efd99",
+      "error": {
+        "code": "E_INTERNAL",
+        "message": "Operation failed: request received",
+        "stack": "at handler (/app/inventory-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 39,
+      "timestamp": "2025-10-01T04:33:00Z",
+      "level": "error",
+      "service": "inventory-service",
+      "message": "Cache miss",
+      "requestId": "4b7fb31d065be2eb"
+    },
+    {
+      "id": 40,
+      "timestamp": "2025-10-01T04:40:00Z",
+      "level": "info",
+      "service": "search-service",
+      "message": "Health check passed",
+      "requestId": "4e124ce6cef1bab2",
+      "error": {
+        "code": "E_INTERNAL",
+        "message": "Operation failed: database query executed",
+        "stack": "at handler (/app/notification-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 41,
+      "timestamp": "2025-10-01T04:47:00Z",
+      "level": "info",
+      "service": "user-service",
+      "message": "Background job completed",
+      "requestId": "2bb97bc6a61721ab"
+    },
+    {
+      "id": 42,
+      "timestamp": "2025-10-01T04:54:00Z",
+      "level": "error",
+      "service": "api-gateway",
+      "message": "Configuration reloaded",
+      "requestId": "4dd9cd42858d7f21",
+      "error": {
+        "code": "E_NOT_FOUND",
+        "message": "Operation failed: connection established",
+        "stack": "at handler (/app/notification-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 43,
+      "timestamp": "2025-10-01T05:01:00Z",
+      "level": "debug",
+      "service": "inventory-service",
+      "message": "Configuration reloaded",
+      "requestId": "ddb0eafb7f7dbb81"
+    },
+    {
+      "id": 44,
+      "timestamp": "2025-10-01T05:08:00Z",
+      "level": "warn",
+      "service": "analytics-service",
+      "message": "Cache miss",
+      "requestId": "ccfcea65f3c5c498",
+      "error": {
+        "code": "E_CONFLICT",
+        "message": "Operation failed: database query executed",
+        "stack": "at handler (/app/inventory-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 45,
+      "timestamp": "2025-10-01T05:15:00Z",
+      "level": "debug",
+      "service": "user-service",
+      "message": "Connection established",
+      "requestId": "18b6bc602d97cba2"
+    },
+    {
+      "id": 46,
+      "timestamp": "2025-10-01T05:22:00Z",
+      "level": "info",
+      "service": "api-gateway",
+      "message": "Request received",
+      "requestId": "b76c29075eeabbdd",
+      "error": {
+        "code": "E_INTERNAL",
+        "message": "Operation failed: request received",
+        "stack": "at handler (/app/notification-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 47,
+      "timestamp": "2025-10-01T05:29:00Z",
+      "level": "debug",
+      "service": "notification-service",
+      "message": "Connection established",
+      "requestId": "4ab3deca832eabd6"
+    },
+    {
+      "id": 48,
+      "timestamp": "2025-10-01T05:36:00Z",
+      "level": "info",
+      "service": "inventory-service",
+      "message": "Cache miss",
+      "requestId": "48d47b7f9974c2f1",
+      "error": {
+        "code": "E_NOT_FOUND",
+        "message": "Operation failed: configuration reloaded",
+        "stack": "at handler (/app/notification-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 49,
+      "timestamp": "2025-10-01T05:43:00Z",
+      "level": "debug",
+      "service": "analytics-service",
+      "message": "Connection established",
+      "requestId": "da02cb3a3bdfea4a"
+    },
+    {
+      "id": 50,
+      "timestamp": "2025-10-01T05:50:00Z",
+      "level": "error",
+      "service": "auth-service",
+      "message": "Configuration reloaded",
+      "requestId": "8247172964dec8e1",
+      "error": {
+        "code": "E_RATE_LIMITED",
+        "message": "Operation failed: connection established",
+        "stack": "at handler (/app/analytics-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 51,
+      "timestamp": "2025-10-01T05:57:00Z",
+      "level": "error",
+      "service": "api-gateway",
+      "message": "Cache miss",
+      "requestId": "fbe86cff6beef97e"
+    },
+    {
+      "id": 52,
+      "timestamp": "2025-10-01T06:04:00Z",
+      "level": "debug",
+      "service": "inventory-service",
+      "message": "Background job completed",
+      "requestId": "43f4b5afbc5dadc7",
+      "error": {
+        "code": "E_NOT_FOUND",
+        "message": "Operation failed: request received",
+        "stack": "at handler (/app/user-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 53,
+      "timestamp": "2025-10-01T06:11:00Z",
+      "level": "error",
+      "service": "payment-service",
+      "message": "Cache miss",
+      "requestId": "3a83ea6ca6bceea0"
+    },
+    {
+      "id": 54,
+      "timestamp": "2025-10-01T06:18:00Z",
+      "level": "error",
+      "service": "inventory-service",
+      "message": "Database query executed",
+      "requestId": "a8fc3b2ccf590cc1",
+      "error": {
+        "code": "E_CONFLICT",
+        "message": "Operation failed: request received",
+        "stack": "at handler (/app/api-gateway.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 55,
+      "timestamp": "2025-10-01T06:25:00Z",
+      "level": "debug",
+      "service": "inventory-service",
+      "message": "Connection established",
+      "requestId": "cf55d412cebfbbe4"
+    },
+    {
+      "id": 56,
+      "timestamp": "2025-10-01T06:32:00Z",
+      "level": "info",
+      "service": "notification-service",
+      "message": "Cache miss",
+      "requestId": "8bdb5af64d782d08",
+      "error": {
+        "code": "E_UNAVAILABLE",
+        "message": "Operation failed: configuration reloaded",
+        "stack": "at handler (/app/search-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 57,
+      "timestamp": "2025-10-01T06:39:00Z",
+      "level": "warn",
+      "service": "payment-service",
+      "message": "Background job completed",
+      "requestId": "bed136fe7b7d44c0"
+    },
+    {
+      "id": 58,
+      "timestamp": "2025-10-01T06:46:00Z",
+      "level": "info",
+      "service": "auth-service",
+      "message": "Background job completed",
+      "requestId": "af8a3ac0f7000dd1",
+      "error": {
+        "code": "E_INTERNAL",
+        "message": "Operation failed: request received",
+        "stack": "at handler (/app/user-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 59,
+      "timestamp": "2025-10-01T06:53:00Z",
+      "level": "debug",
+      "service": "analytics-service",
+      "message": "Health check passed",
+      "requestId": "0dacd8ccda1feda3"
+    },
+    {
+      "id": 60,
+      "timestamp": "2025-10-01T07:00:00Z",
+      "level": "debug",
+      "service": "payment-service",
+      "message": "Configuration reloaded",
+      "requestId": "6fcd4fed5c144b26",
+      "error": {
+        "code": "E_CONFLICT",
+        "message": "Operation failed: request received",
+        "stack": "at handler (/app/api-gateway.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 61,
+      "timestamp": "2025-10-01T07:07:00Z",
+      "level": "warn",
+      "service": "user-service",
+      "message": "Configuration reloaded",
+      "requestId": "dac066af47ef5f71"
+    },
+    {
+      "id": 62,
+      "timestamp": "2025-10-01T07:14:00Z",
+      "level": "error",
+      "service": "payment-service",
+      "message": "Request received",
+      "requestId": "6ea7ddbc9b06a7ea",
+      "error": {
+        "code": "E_NOT_FOUND",
+        "message": "Operation failed: connection established",
+        "stack": "at handler (/app/payment-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 63,
+      "timestamp": "2025-10-01T07:21:00Z",
+      "level": "error",
+      "service": "payment-service",
+      "message": "Health check passed",
+      "requestId": "c801e031aefa99d2"
+    },
+    {
+      "id": 64,
+      "timestamp": "2025-10-01T07:28:00Z",
+      "level": "warn",
+      "service": "api-gateway",
+      "message": "Configuration reloaded",
+      "requestId": "5b70e3b69db2ab6d",
+      "error": {
+        "code": "E_CONFLICT",
+        "message": "Operation failed: background job completed",
+        "stack": "at handler (/app/inventory-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 65,
+      "timestamp": "2025-10-01T07:35:00Z",
+      "level": "debug",
+      "service": "payment-service",
+      "message": "Connection established",
+      "requestId": "c22a817087c17bb3"
+    },
+    {
+      "id": 66,
+      "timestamp": "2025-10-01T07:42:00Z",
+      "level": "info",
+      "service": "inventory-service",
+      "message": "Cache miss",
+      "requestId": "bb8c9c00e5eaa1f7",
+      "error": {
+        "code": "E_CONFLICT",
+        "message": "Operation failed: request received",
+        "stack": "at handler (/app/search-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 67,
+      "timestamp": "2025-10-01T07:49:00Z",
+      "level": "warn",
+      "service": "notification-service",
+      "message": "Health check passed",
+      "requestId": "dac0a74f1a6c3dac"
+    },
+    {
+      "id": 68,
+      "timestamp": "2025-10-01T07:56:00Z",
+      "level": "error",
+      "service": "analytics-service",
+      "message": "Connection established",
+      "requestId": "5f3ef9f8dbb1a653",
+      "error": {
+        "code": "E_INTERNAL",
+        "message": "Operation failed: database query executed",
+        "stack": "at handler (/app/analytics-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 69,
+      "timestamp": "2025-10-01T08:03:00Z",
+      "level": "debug",
+      "service": "analytics-service",
+      "message": "Background job completed",
+      "requestId": "310e5d8acba4d8e8"
+    },
+    {
+      "id": 70,
+      "timestamp": "2025-10-01T08:10:00Z",
+      "level": "warn",
+      "service": "notification-service",
+      "message": "Configuration reloaded",
+      "requestId": "b7affc91eb0d76a2",
+      "error": {
+        "code": "E_NOT_FOUND",
+        "message": "Operation failed: cache miss",
+        "stack": "at handler (/app/inventory-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 71,
+      "timestamp": "2025-10-01T08:17:00Z",
+      "level": "debug",
+      "service": "user-service",
+      "message": "Background job completed",
+      "requestId": "ce2ac3f4faad510c"
+    },
+    {
+      "id": 72,
+      "timestamp": "2025-10-01T08:24:00Z",
+      "level": "info",
+      "service": "analytics-service",
+      "message": "Cache miss",
+      "requestId": "d3dae839c64b4f58",
+      "error": {
+        "code": "E_UNAVAILABLE",
+        "message": "Operation failed: health check passed",
+        "stack": "at handler (/app/user-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 73,
+      "timestamp": "2025-10-01T08:31:00Z",
+      "level": "debug",
+      "service": "inventory-service",
+      "message": "Request received",
+      "requestId": "908a9b4bdffc078b"
+    },
+    {
+      "id": 74,
+      "timestamp": "2025-10-01T08:38:00Z",
+      "level": "warn",
+      "service": "analytics-service",
+      "message": "Background job completed",
+      "requestId": "d1cba4a40e6e06be",
+      "error": {
+        "code": "E_RATE_LIMITED",
+        "message": "Operation failed: configuration reloaded",
+        "stack": "at handler (/app/user-service.js:42:7)\nat processTicksAndRejections (node:internal/process/task_queues:95:5)"
+      }
+    },
+    {
+      "id": 75,
+      "timestamp": "2025-10-01T08:45:00Z",
+      "level": "warn",
+      "service": "payment-service",
+      "message": "Request received",
+      "requestId": "a109a6bc44bbdce9"
+    }
+  ]
+}

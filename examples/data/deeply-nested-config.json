@@ -1,0 +1,83 @@
+{
+  "app": {
+    "name": "go-toon-bench",
+    "version": "1.0.0",
+    "environment": "production"
+  },
+  "server": {
+    "host": "0.0.0.0",
+    "port": 3000,
+    "tls": {
+      "enabled": true,
+      "cert": "/etc/ssl/certs/app.pem",
+      "key": "/etc/ssl/private/app.key",
+      "minVersion": "TLS1.3",
+      "ciphers": [
+        "TLS_AES_256_GCM_SHA384",
+        "TLS_CHACHA20_POLY1305_SHA256"
+      ]
+    },
+    "cors": {
+      "origins": [
+        "https://example.com",
+        "https://app.example.com"
+      ],
+      "methods": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE"
+      ],
+      "headers": [
+        "Content-Type",
+        "Authorization"
+      ]
+    },
+    "rateLimit": {
+      "windowMs": 60000,
+      "max": 1000,
+      "store": {
+        "type": "redis",
+        "redis": {
+          "host": "127.0.0.1",
+          "port": 6379,
+          "db": 0
+        }
+      }
+    }
+  },
+  "database": {
+    "primary": {
+      "host": "db-primary.internal",
+      "port": 5432,
+      "pool": {
+        "min": 2,
+        "max": 20,
+        "idleTimeoutMs": 30000
+      }
+    },
+    "replica": {
+      "host": "db-replica.internal",
+      "port": 5432,
+      "pool": {
+        "min": 1,
+        "max": 10,
+        "idleTimeoutMs": 30000
+      }
+    }
+  },
+  "features": {
+    "experimental": {
+      "betaSearch": {
+        "enabled": false,
+        "rollout": {
+          "percentage": 5,
+          "allowList": [
+            "user-1",
+            "user-2"
+          ]
+        }
+      }
+    }
+  }
+}

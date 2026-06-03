@@ -1,0 +1,192 @@
+{
+  "_meta": {
+    "mutation": "rows 3, 7, 12, 18 missing 'email' field",
+    "declaredFields": [
+      "id",
+      "name",
+      "email",
+      "department",
+      "salary",
+      "yearsExperience",
+      "active"
+    ]
+  },
+  "employees": [
+    {
+      "id": 1,
+      "name": "AA",
+      "email": "aa1@example.com",
+      "department": "Sales",
+      "salary": 51500,
+      "yearsExperience": 2,
+      "active": true
+    },
+    {
+      "id": 2,
+      "name": "BB",
+      "email": "bb2@example.com",
+      "department": "Marketing",
+      "salary": 53000,
+      "yearsExperience": 3,
+      "active": true
+    },
+    {
+      "id": 3,
+      "name": "CC",
+      "department": "HR",
+      "salary": 54500,
+      "yearsExperience": 4,
+      "active": true
+    },
+    {
+      "id": 4,
+      "name": "DD",
+      "email": "dd4@example.com",
+      "department": "Finance",
+      "salary": 56000,
+      "yearsExperience": 5,
+      "active": false
+    },
+    {
+      "id": 5,
+      "name": "EE",
+      "email": "ee5@example.com",
+      "department": "Operations",
+      "salary": 57500,
+      "yearsExperience": 6,
+      "active": true
+    },
+    {
+      "id": 6,
+      "name": "FF",
+      "email": "ff6@example.com",
+      "department": "Engineering",
+      "salary": 59000,
+      "yearsExperience": 7,
+      "active": true
+    },
+    {
+      "id": 7,
+      "name": "GG",
+      "department": "Sales",
+      "salary": 60500,
+      "yearsExperience": 8,
+      "active": true
+    },
+    {
+      "id": 8,
+      "name": "HH",
+      "email": "hh8@example.com",
+      "department": "Marketing",
+      "salary": 62000,
+      "yearsExperience": 9,
+      "active": false
+    },
+    {
+      "id": 9,
+      "name": "II",
+      "email": "ii9@example.com",
+      "department": "HR",
+      "salary": 63500,
+      "yearsExperience": 10,
+      "active": true
+    },
+    {
+      "id": 10,
+      "name": "JJ",
+      "email": "jj10@example.com",
+      "department": "Finance",
+      "salary": 65000,
+      "yearsExperience": 11,
+      "active": true
+    },
+    {
+      "id": 11,
+      "name": "AA",
+      "email": "aa11@example.com",
+      "department": "Operations",
+      "salary": 66500,
+      "yearsExperience": 12,
+      "active": true
+    },
+    {
+      "id": 12,
+      "name": "BB",
+      "department": "Engineering",
+      "salary": 68000,
+      "yearsExperience": 1,
+      "active": false
+    },
+    {
+      "id": 13,
+      "name": "CC",
+      "email": "cc13@example.com",
+      "department": "Sales",
+      "salary": 69500,
+      "yearsExperience": 2,
+      "active": true
+    },
+    {
+      "id": 14,
+      "name": "DD",
+      "email": "dd14@example.com",
+      "department": "Marketing",
+      "salary": 71000,
+      "yearsExperience": 3,
+      "active": true
+    },
+    {
+      "id": 15,
+      "name": "EE",
+      "email": "ee15@example.com",
+      "department": "HR",
+      "salary": 72500,
+      "yearsExperience": 4,
+      "active": true
+    },
+    {
+      "id": 16,
+      "name": "FF",
+      "email": "ff16@example.com",
+      "department": "Finance",
+      "salary": 74000,
+      "yearsExperience": 5,
+      "active": false
+    },
+    {
+      "id": 17,
+      "name": "GG",
+      "email": "gg17@example.com",
+      "department": "Operations",
+      "salary": 75500,
+      "yearsExperience": 6,
+      "active": true
+    },
+    {
+      "id": 18,
+      "name": "HH",
+      "department": "Engineering",
+      "salary": 77000,
+      "yearsExperience": 7,
+      "active": true
+    },
+    {
+      "id": 19,
+      "name": "II",
+      "email": "ii19@example.com",
+      "department": "Sales",
+      "salary": 78500,
+      "yearsExperience": 8,
+      "active": true
+    },
+    {
+      "id": 20,
+      "name": "JJ",
+      "email": "jj20@example.com",
+      "department": "Marketing",
+      "salary": 80000,
+      "yearsExperience": 9,
+      "active": false
+    }
+  ]
+}
