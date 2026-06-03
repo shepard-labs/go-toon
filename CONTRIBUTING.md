@@ -212,7 +212,7 @@ Before requesting review:
 - Minor releases may add options and non-breaking APIs.
 - Major releases may track breaking TOON spec changes or public API changes.
 
-Treat `toon.Node`, `toon.Field`, `toon.Number`, `toon.Kind`, the encode and decode entry points, `EncodeOptions`, `DecodeOptions`, `Error`, and `ErrorCode` as the stable API surface. Changes to their shape require a minor or major version bump.
+Treat `toon.Node`, `toon.Field`, `toon.Number`, `toon.Kind`, the encode and decode entry points, `EncodeOptions`, `DecodeOptions`, `Error`, and `ErrorCode` as the stable API surface. Changes to their shape require a minor or major version bump. `toon/reflect` is stable from v1.0.0 — its `Marshal`, `Unmarshal`, `UnmarshalReader`, `UnmarshalNode`, `NodeFromValue`, `NodeToValue`, `ValueOptions`, `Options`, and `UnmarshalOptions` are part of the stable surface from this release onward.
 
 ## Security Issues
 

@@ -22,6 +22,10 @@ const (
 	ErrResourceLimit           ErrorCode = "resource_limit"
 	ErrInvalidInputFormat      ErrorCode = "invalid_input_format"
 	ErrUnsupportedFeature      ErrorCode = "unsupported_feature"
+	ErrUnsupportedKind         ErrorCode = "unsupported_kind"
+	ErrCyclicValue             ErrorCode = "cyclic_value"
+	ErrUnmarshalType           ErrorCode = "unmarshal_type"
+	ErrNonPointerTarget        ErrorCode = "non_pointer_target"
 )
 
 type Error struct {

@@ -104,6 +104,7 @@ func (e *encoder) writeArray(key *string, n *Node, depth int, listItem bool) err
 		if key == nil {
 			e.buf.WriteString("[]")
 		} else {
+			e.buf.WriteString(encodeKey(*key))
 			e.buf.WriteString(": []")
 		}
 		return nil

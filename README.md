@@ -35,6 +35,17 @@ import "github.com/shepard-labs/go-toon/toon"
 - `toon.EncodeOptions` and `toon.DecodeOptions` are the concrete option sources of truth.
 - `toon.Error` carries stable `toon.ErrorCode` values. Use `toon.CodeOf(err)` or `errors.As` to branch without string matching.
 
+Reflection package:
+
+```go
+import "github.com/shepard-labs/go-toon/toon/reflect"
+```
+
+- `Marshal(w io.Writer, v any, ...Option) error` and `NodeFromValue(v any, ...ValueOption) (*toon.Node, error)` map Go values to ordered `*toon.Node` and TOON bytes.
+- `Unmarshal(data []byte, v any, ...UnmarshalOption) error`, `UnmarshalReader(r io.Reader, v any, ...)`, and `UnmarshalNode(n *toon.Node, v any, ...)` populate a non-nil pointer.
+- `NodeToValue(n *toon.Node, v any, ...)` converts an ordered node into a Go value of your choice.
+- `ValueOptions`, `Options`, and `UnmarshalOptions` are the option sources of truth; functional setters mutate copies and merge into the package defaults.
+
 Formats package:
 
 ```go
@@ -107,6 +118,11 @@ Important encode flags:
 - YAML aliases are resolved through the YAML AST with cycle rejection.
 - Resource limits are configurable for input bytes, string bytes, node count, depth, and array length.
 - CLI safe defaults set `MaxDepth` to `512` and `MaxStringBytes` to `64 MiB`.
+- `toon/reflect` decode requires a non-nil pointer destination (`toon.ErrNonPointerTarget` otherwise).
+- `toon/reflect` cycles on encode are rejected with `toon.ErrCyclicValue`; type mismatches on decode surface as `toon.ErrUnmarshalType`.
+- `toon/reflect` `[]byte` (and named `[]byte` types) marshal as base64 strings and unmarshal from base64 strings.
+- `toon/reflect` `TextMarshaler` is honored on encode; `TextUnmarshaler` is honored on decode as an escape hatch.
+- `toon/reflect` decode propagates `toon.Decode` errors (e.g., `ErrInvalidIndent`, `ErrDuplicateKey`) with their original code via `toon.CodeOf`.
 
 ## Number Modes
 
@@ -168,6 +184,8 @@ Recommended release checks:
 go test ./...
 go test -race ./...
 go test ./toon -run=Fuzz -fuzz=FuzzDecode -fuzztime=10s
+go test ./toon/reflect -run=Fuzz -fuzz=FuzzMarshalValue -fuzztime=10s
+go test ./toon/reflect -run=Fuzz -fuzz=FuzzUnmarshalValue -fuzztime=10s
 go test ./... -bench=. -run='^$'
 ```
 
@@ -197,5 +215,11 @@ go test ./toon ./formats -bench=. -run='^$' -benchmem -count=5
 | `BenchmarkJSONOutputOrderedNode` | 88-92 us | 188 KB | 122 |
 | `BenchmarkWideJSONObjectNormalization` | 89-91 us | 329 KB | 1050 |
 | `BenchmarkWideCSVHeaderNormalization` | 147 us | 557 KB | 2085 |
+| `BenchmarkMarshalSmallStruct` (`toon/reflect`) | ~3.0 us | 4.5 KB | 62 |
+| `BenchmarkUnmarshalSmallStruct` (`toon/reflect`) | ~3.3 us | 5.3 KB | 50 |
+| `BenchmarkMarshalLargeMap` (`toon/reflect`, 1k keys) | ~333 us | 305 KB | 6122 |
+| `BenchmarkUnmarshalLargeArray` (`toon/reflect`, 256 ints) | ~21 us | 42 KB | 280 |
+| `BenchmarkNodeFromValue` (`toon/reflect`) | ~2.0 us | 3.5 KB | 48 |
+| `BenchmarkNodeToValue` (`toon/reflect`) | ~1.5 us | 0.8 KB | 9 |
 
 JSON normalization uses a purpose-built ordered scanner to preserve object order, detect duplicate keys, and retain lossless number tokens without routing through Go maps.
