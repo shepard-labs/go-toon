@@ -26,6 +26,7 @@ package reflect
 import (
 	"io"
 	"reflect"
+	"time"
 	"unsafe"
 
 	"github.com/shepard-labs/go-toon/toon"
@@ -43,6 +44,9 @@ type ValueOptions struct {
 	// NumberMode controls how non-finite float values are handled during
 	// encode. It does not affect decode (decode parses numbers losslessly).
 	NumberMode toon.NumberMode
+	// TimeFormatter formats time.Time values during encode. When nil, time.Time
+	// uses its default encoding.TextMarshaler behavior.
+	TimeFormatter func(time.Time) string
 }
 
 // Options configures the Marshal convenience function. It bundles value-walker
@@ -228,6 +232,9 @@ func mergeEncodeOptions(dst *toon.EncodeOptions, src toon.EncodeOptions) {
 	}
 	if src.Delimiter != 0 {
 		dst.Delimiter = src.Delimiter
+	}
+	if src.IncludeLengthMarkers {
+		dst.IncludeLengthMarkers = true
 	}
 	if src.KeyFolding != 0 {
 		dst.KeyFolding = src.KeyFolding

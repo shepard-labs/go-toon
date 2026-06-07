@@ -9,8 +9,9 @@ import (
 // GoName is the original Go field name used for reflect lookups; Key is the
 // name that appears in the *toon.Node output (after tag renaming).
 type fieldInfo struct {
-	GoName string
-	Key    string
+	GoName    string
+	Key       string
+	OmitEmpty bool
 }
 
 // structFields returns the visible, sorted-by-declaration-order fields of t.
@@ -39,7 +40,7 @@ func collectFields(t reflect.Type, out *[]fieldInfo, seen map[string]bool, tagNa
 		if !sf.IsExported() {
 			continue
 		}
-		name, skip := parseFieldTag(sf.Tag, tagName)
+		name, skip, omitEmpty := parseFieldTag(sf.Tag, tagName)
 		if skip {
 			continue
 		}
@@ -51,23 +52,39 @@ func collectFields(t reflect.Type, out *[]fieldInfo, seen map[string]bool, tagNa
 			continue
 		}
 		seen[key] = true
-		*out = append(*out, fieldInfo{GoName: sf.Name, Key: key})
+		*out = append(*out, fieldInfo{GoName: sf.Name, Key: key, OmitEmpty: omitEmpty})
 	}
 }
 
-func parseFieldTag(tag reflect.StructTag, tagName string) (name string, skip bool) {
+func parseFieldTag(tag reflect.StructTag, tagName string) (name string, skip bool, omitEmpty bool) {
 	if tagName == "" {
-		return "", false
+		return "", false, false
 	}
 	raw, ok := tag.Lookup(tagName)
 	if !ok {
-		return "", false
+		return "", false, false
 	}
-	if i := strings.IndexByte(raw, ','); i >= 0 {
-		raw = raw[:i]
+	parts := strings.Split(raw, ",")
+	if parts[0] == "-" {
+		return "", true, false
 	}
-	if raw == "-" {
-		return "", true
+	for _, opt := range parts[1:] {
+		if opt == "omitempty" {
+			omitEmpty = true
+		}
 	}
-	return raw, false
+	return parts[0], false, omitEmpty
+}
+
+func isEmptyValue(v reflect.Value) bool {
+	if !v.IsValid() {
+		return true
+	}
+	for v.Kind() == reflect.Interface || v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return true
+		}
+		v = v.Elem()
+	}
+	return v.IsZero()
 }

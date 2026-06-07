@@ -33,12 +33,13 @@ const (
 )
 
 type EncodeOptions struct {
-	IndentSize   int
-	Delimiter    Delimiter
-	KeyFolding   KeyFoldingMode
-	FlattenDepth int
-	NumberMode   NumberMode
-	Limits       ResourceLimits
+	IndentSize           int
+	Delimiter            Delimiter
+	IncludeLengthMarkers bool
+	KeyFolding           KeyFoldingMode
+	FlattenDepth         int
+	NumberMode           NumberMode
+	Limits               ResourceLimits
 }
 
 type DecodeOptions struct {

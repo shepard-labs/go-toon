@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/shepard-labs/go-toon/toon"
 )
@@ -143,6 +144,44 @@ func TestNodeFromValueStructOrderAndTags(t *testing.T) {
 	}
 }
 
+func TestNodeFromValueStructOmitEmpty(t *testing.T) {
+	type Nested struct {
+		Value string `toon:"value"`
+	}
+	type S struct {
+		Name      string            `toon:"name,omitempty"`
+		Title     string            `toon:",omitempty"`
+		Count     int               `toon:"count,omitempty"`
+		Enabled   bool              `toon:"enabled,omitempty"`
+		Pointer   *int              `toon:"pointer,omitempty"`
+		Tags      []string          `toon:"tags,omitempty"`
+		Labels    map[string]string `toon:"labels,omitempty"`
+		Nested    Nested            `toon:"nested,omitempty"`
+		KeepEmpty string            `toon:"keep_empty"`
+		Skip      string            `toon:"-"`
+	}
+	got, err := NodeFromValue(S{KeepEmpty: ""})
+	if err != nil {
+		t.Fatalf("NodeFromValue error: %v", err)
+	}
+	if len(got.Object) != 1 || got.Object[0].Key != "keep_empty" {
+		t.Fatalf("omitempty object = %#v", got)
+	}
+
+	one := 1
+	got, err = NodeFromValue(S{Name: "Ada", Title: "Engineer", Count: 2, Enabled: true, Pointer: &one, Tags: []string{"x"}, Labels: map[string]string{"a": "b"}, Nested: Nested{Value: "v"}})
+	if err != nil {
+		t.Fatalf("NodeFromValue non-empty error: %v", err)
+	}
+	keys := []string{}
+	for _, f := range got.Object {
+		keys = append(keys, f.Key)
+	}
+	if strings.Join(keys, ",") != "name,Title,count,enabled,pointer,tags,labels,nested,keep_empty" {
+		t.Fatalf("non-empty keys = %v", keys)
+	}
+}
+
 type embed struct {
 	Inner struct {
 		X int `toon:"x"`
@@ -261,6 +300,40 @@ func TestNodeFromValueTextMarshaler(t *testing.T) {
 	}
 	if got.Kind != toon.StringKind || got.String != "text:hi" {
 		t.Fatalf("text marshaler = %#v", got)
+	}
+}
+
+func TestNodeFromValueTimeFormatter(t *testing.T) {
+	ts := time.Date(2025, 6, 4, 12, 30, 0, 123, time.FixedZone("X", 3600))
+	got, err := NodeFromValue(ts)
+	if err != nil {
+		t.Fatalf("NodeFromValue default time error: %v", err)
+	}
+	if got.Kind != toon.StringKind || got.String != "2025-06-04T12:30:00.000000123+01:00" {
+		t.Fatalf("default time = %#v", got)
+	}
+
+	got, err = NodeFromValue(ts, func(o *ValueOptions) {
+		o.TimeFormatter = func(t time.Time) string { return t.UTC().Format("2006-01-02") }
+	})
+	if err != nil {
+		t.Fatalf("NodeFromValue custom time error: %v", err)
+	}
+	if got.Kind != toon.StringKind || got.String != "2025-06-04" {
+		t.Fatalf("custom time = %#v", got)
+	}
+
+	type Event struct {
+		At time.Time `toon:"at"`
+	}
+	got, err = NodeFromValue(Event{At: ts}, func(o *ValueOptions) {
+		o.TimeFormatter = func(t time.Time) string { return t.UTC().Format(time.RFC3339) }
+	})
+	if err != nil {
+		t.Fatalf("NodeFromValue struct time error: %v", err)
+	}
+	if got.Kind != toon.ObjectKind || len(got.Object) != 1 || got.Object[0].Value.String != "2025-06-04T11:30:00Z" {
+		t.Fatalf("struct time = %#v", got)
 	}
 }
 

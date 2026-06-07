@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"time"
 	"unsafe"
 
 	"github.com/shepard-labs/go-toon/toon"
@@ -34,6 +35,11 @@ func (w *valueWalker) fromValue(v reflect.Value, depth int) (*toon.Node, error) 
 		iface := v.Interface()
 		if iface == nil {
 			return &toon.Node{Kind: toon.NullKind}, nil
+		}
+		if w.opts.TimeFormatter != nil {
+			if t, ok := iface.(time.Time); ok {
+				return w.fromString(w.opts.TimeFormatter(t), depth+1)
+			}
 		}
 		if tm, ok := iface.(encoding.TextMarshaler); ok {
 			s, err := tm.MarshalText()
@@ -213,6 +219,9 @@ func (w *valueWalker) fromStruct(v reflect.Value, depth int) (*toon.Node, error)
 	for _, fi := range fields {
 		fv := v.FieldByName(fi.GoName)
 		if !fv.IsValid() {
+			continue
+		}
+		if fi.OmitEmpty && isEmptyValue(fv) {
 			continue
 		}
 		child, err := w.fromValue(fv, depth+1)

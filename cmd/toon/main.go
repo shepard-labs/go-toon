@@ -55,6 +55,7 @@ func runEncode(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	format := fs.String("format", "auto", "input format")
 	indent := fs.Int("indent", 2, "TOON indent")
 	delimiter := fs.String("delimiter", "comma", "TOON delimiter")
+	lengthMarkers := fs.Bool("length-markers", false, "emit TOON length markers")
 	keyFolding := fs.String("key-folding", "off", "key folding")
 	flattenDepth := fs.Int("flatten-depth", 0, "flatten depth")
 	stats := fs.Bool("stats", false, "print stats")
@@ -71,7 +72,7 @@ func runEncode(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	xmlNamespaces := fs.String("xml-namespaces", "local", "XML namespaces")
 	if err := fs.Parse(normalizeFlagArgs(args, map[string]bool{
 		"--input": true, "-i": true, "--output": true, "-o": true, "--format": true, "--indent": true,
-		"--delimiter": true, "--key-folding": true, "--flatten-depth": true, "--csv-header": true,
+		"--delimiter": true, "--length-markers": true, "--key-folding": true, "--flatten-depth": true, "--csv-header": true,
 		"--csv-delimiter": true, "--csv-root-key": true, "--yaml-docs": true, "--yaml-scalars": true,
 		"--xml-attr-prefix": true, "--xml-text-key": true, "--xml-mixed-content": true, "--xml-namespaces": true,
 		"--csv-infer-types": true, "--xml-infer-types": true, "--stats": false,
@@ -128,7 +129,7 @@ func runEncode(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	encOpts := encodeOptions(*indent, *delimiter, *keyFolding, *flattenDepth)
+	encOpts := encodeOptions(*indent, *delimiter, *lengthMarkers, *keyFolding, *flattenDepth)
 	out, err := toon.Encode(n, func(o *toon.EncodeOptions) { *o = encOpts })
 	if err != nil {
 		return err
@@ -206,10 +207,11 @@ func runValidate(args []string, stdin io.Reader) error {
 	})
 }
 
-func encodeOptions(indent int, delimiter, folding string, flattenDepth int) toon.EncodeOptions {
+func encodeOptions(indent int, delimiter string, lengthMarkers bool, folding string, flattenDepth int) toon.EncodeOptions {
 	o := toon.DefaultEncodeOptions()
 	o.IndentSize = indent
 	o.Delimiter = parseDelimiter(delimiter)
+	o.IncludeLengthMarkers = lengthMarkers
 	o.KeyFolding = parseKeyFolding(folding)
 	if flattenDepth > 0 {
 		o.FlattenDepth = flattenDepth
