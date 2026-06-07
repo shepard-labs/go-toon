@@ -82,6 +82,10 @@ func TestEncodeFlags(t *testing.T) {
 	if code != 0 || out != "a.b:\n  c: 1" {
 		t.Fatalf("folding code=%d out=%q stderr=%s", code, out, stderr)
 	}
+	code, out, stderr = runCLI([]string{"encode", "--format", "json", "--length-markers"}, `{"tags":["a","b"]}`)
+	if code != 0 || out != "tags[#2]: a,b" {
+		t.Fatalf("length markers code=%d out=%q stderr=%s", code, out, stderr)
+	}
 }
 
 func TestEncodeCSVFlags(t *testing.T) {

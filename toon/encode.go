@@ -217,6 +217,9 @@ func (e *encoder) writeHeader(key *string, length int, delimiter Delimiter, fiel
 		e.buf.WriteString(encodeKey(*key))
 	}
 	e.buf.WriteByte('[')
+	if e.opts.IncludeLengthMarkers {
+		e.buf.WriteByte('#')
+	}
 	e.buf.WriteString(strconv.Itoa(length))
 	if delimiter != Comma {
 		e.buf.WriteByte(byte(delimiter))

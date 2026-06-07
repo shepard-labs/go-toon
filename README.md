@@ -21,40 +21,542 @@ The library exposes `toon.SpecVersion = "3.3"`.
 - 🧰 **Production CLI** — `toon encode`, `decode`, and `validate` with a flag surface mirroring library options.
 - ⚡ **Battle-tested** — race tests, fuzz targets, golden conformance tests, and cross-platform builds for `linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, and `windows/amd64`.
 
+## Comparison With `github.com/toon-format/toon-go`
+
+This package is broader than the upstream `github.com/toon-format/toon-go` package. It prioritizes an ordered document model, lossless decode behavior, format normalization, validation, resource limits, and CLI workflows. The upstream package prioritizes a compact `encoding/json`-style API for Go-value marshal/unmarshal with fewer moving parts.
+
+| Feature | `github.com/shepard-labs/go-toon` | `github.com/toon-format/toon-go` |
+|---|---:|---:|
+| Primary API style | 🧱 Ordered `*toon.Node` core plus `toon/reflect` | 🪶 Top-level `Marshal` / `Unmarshal` |
+| Decode target | 🧱 Ordered `*toon.Node` | 🗺️ `any`, `map[string]any`, `[]any` |
+| Preserves decoded object order | ✅ Yes | ❌ No |
+| Lossless number tokens on decode | ✅ Yes | ⚠️ No, decodes numbers as `float64` |
+| Struct marshal/unmarshal | ✅ Yes, via `toon/reflect` | ✅ Yes, top-level |
+| `omitempty` struct tags | ✅ Yes | ✅ Yes |
+| Custom `time.Time` formatting | ✅ Yes | ✅ Yes |
+| Optional length markers | ✅ Yes | ✅ Yes |
+| JSON/YAML/CSV/XML to TOON | ✅ Yes | ❌ No |
+| Ordered TOON to JSON | ✅ Yes | ❌ No |
+| CLI | ✅ Yes | ❌ No |
+| Validation-only API | ✅ Yes | ❌ No dedicated API |
+| Typed error codes | ✅ Yes | ❌ No public error-code API |
+| Resource limits | ✅ Yes | ❌ No public resource limits |
+| Key folding / path expansion | ✅ Yes | ❌ No |
+| Reusable encoder/decoder types | ❌ No public core types | ✅ Yes |
+| String convenience APIs | ❌ No core `EncodeString` / `DecodeString` | ✅ Yes |
+| External dependencies | 📦 `gopkg.in/yaml.v3` | ✅ None found |
+
+See [FEATURE_COMPARISON.md](FEATURE_COMPARISON.md) for the detailed comparison.
+
 ## Library API
 
-Core package:
+### Core package
 
 ```go
 import "github.com/shepard-labs/go-toon/toon"
 ```
 
-- `toon.Node`, `toon.Field`, `toon.Number`, and `toon.Kind` represent ordered documents.
-- `toon.Encode` and `toon.EncodeToWriter` encode ordered nodes to TOON.
-- `toon.Decode`, `toon.DecodeReader`, and `toon.Validate` parse and validate TOON.
-- `toon.EncodeOptions` and `toon.DecodeOptions` are the concrete option sources of truth.
-- `toon.Error` carries stable `toon.ErrorCode` values. Use `toon.CodeOf(err)` or `errors.As` to branch without string matching.
+#### Types
 
-Reflection package:
+- `toon.Node` — the ordered document model. A node can represent any TOON value.
+- `toon.Field` — a key-value pair within an `ObjectKind` node.
+- `toon.Number` — stores the raw string representation of a number for lossless round-trips.
+- `toon.Kind` — the type of a node (`NullKind`, `BoolKind`, `NumberKind`, `StringKind`, `ArrayKind`, `ObjectKind`).
+
+#### Encoding
+
+```go
+n := &toon.Node{
+    Kind: toon.ObjectKind,
+    Object: []toon.Field{
+        {Key: "id", Value: &toon.Node{Kind: toon.NumberKind, Number: toon.Number{Raw: "1"}}},
+        {Key: "user", Value: &toon.Node{
+            Kind: toon.ObjectKind,
+            Object: []toon.Field{
+                {Key: "name", Value: &toon.Node{Kind: toon.StringKind, String: "Ada"}},
+                {Key: "active", Value: &toon.Node{Kind: toon.BoolKind, Bool: true}},
+            },
+        }},
+    },
+}
+
+// Encode to bytes
+data, err := toon.Encode(n)
+
+// Encode to a writer
+var buf bytes.Buffer
+err = toon.EncodeToWriter(&buf, n)
+
+// With custom indentation
+data, err = toon.Encode(n, func(o *toon.EncodeOptions) {
+    o.IndentSize = 4
+})
+
+// With optional length markers in array headers
+data, err = toon.Encode(n, func(o *toon.EncodeOptions) {
+    o.IncludeLengthMarkers = true
+})
+// items[#2]{sku,qty,price}:
+```
+
+#### Decoding
+
+```go
+// Decode from bytes
+n, err := toon.Decode([]byte("id: 1\nuser:\n  name: Ada\n  active: true"))
+
+// Decode from a reader
+n, err = toon.DecodeReader(strings.NewReader("id: 1"))
+
+// Validate without decoding
+err = toon.Validate([]byte("id: 1"))
+
+// With path expansion (dot-separated keys become nested objects)
+n, err = toon.Decode([]byte("a.b: 1"), func(o *toon.DecodeOptions) {
+    o.ExpandPaths = toon.ExpandPathsSafe
+})
+
+// With strict mode disabled
+n, err = toon.Decode([]byte("id: 1"), func(o *toon.DecodeOptions) {
+    o.Strict = false
+})
+
+// With resource limits
+n, err = toon.Decode([]byte("id: 1"), func(o *toon.DecodeOptions) {
+    o.Limits = toon.ResourceLimits{
+        MaxDepth:       10,
+        MaxNodes:       1000,
+        MaxBytes:       1024,
+        MaxStringBytes: 1024,
+        MaxArrayLength: 100,
+    }
+})
+```
+
+#### Error handling
+
+```go
+err := toon.Validate([]byte("invalid"))
+if err != nil {
+    // Extract the error code for branching without string matching
+    code := toon.CodeOf(err)
+    if code == toon.ErrDuplicateKey {
+        // handle duplicate key
+    }
+
+    // Or use errors.As
+    var toonErr *toon.Error
+    if errors.As(err, &toonErr) {
+        fmt.Println(toonErr.Line, toonErr.Column, toonErr.Code)
+    }
+}
+```
+
+#### Tabular arrays
+
+```go
+// Encoding tabular arrays
+n := &toon.Node{
+    Kind: toon.ObjectKind,
+    Object: []toon.Field{
+        {Key: "items", Value: &toon.Node{
+            Kind: toon.ArrayKind,
+            Array: []*toon.Node{
+                {Kind: toon.ObjectKind, Object: []toon.Field{
+                    {Key: "sku", Value: &toon.Node{Kind: toon.StringKind, String: "A1"}},
+                    {Key: "qty", Value: &toon.Node{Kind: toon.NumberKind, Number: toon.Number{Raw: "2"}}},
+                    {Key: "price", Value: &toon.Node{Kind: toon.NumberKind, Number: toon.Number{Raw: "9.9900"}}},
+                }},
+                {Kind: toon.ObjectKind, Object: []toon.Field{
+                    {Key: "sku", Value: &toon.Node{Kind: toon.StringKind, String: "B2"}},
+                    {Key: "qty", Value: &toon.Node{Kind: toon.NumberKind, Number: toon.Number{Raw: "1"}}},
+                    {Key: "price", Value: &toon.Node{Kind: toon.NumberKind, Number: toon.Number{Raw: "14.5"}}},
+                }},
+            },
+        }},
+    },
+}
+data, _ := toon.Encode(n)
+// Output: items[2]{sku,qty,price}:\n  A1,2,9.99\n  B2,1,14.5
+```
+
+#### Key folding
+
+```go
+n := &toon.Node{
+    Kind: toon.ObjectKind,
+    Object: []toon.Field{
+        {Key: "a", Value: &toon.Node{
+            Kind: toon.ObjectKind,
+            Object: []toon.Field{
+                {Key: "b", Value: &toon.Node{
+                    Kind: toon.ObjectKind,
+                    Object: []toon.Field{
+                        {Key: "c", Value: &toon.Node{Kind: toon.NumberKind, Number: toon.Number{Raw: "1"}}},
+                    },
+                }},
+            },
+        }},
+    },
+}
+data, _ := toon.Encode(n, func(o *toon.EncodeOptions) {
+    o.KeyFolding = toon.KeyFoldingSafe
+})
+// Output: a.b.c: 1
+```
+
+#### Number modes
+
+```go
+// Lossless (default) — preserves decimal tokens
+n, _ := toon.Decode([]byte("pi: 3.141592653589793238462643383279"))
+// n.Object[0].Value.Number.Raw == "3.141592653589793238462643383279"
+
+// Float64 — may lose precision
+n, _ = toon.Decode([]byte("pi: 3.141592653589793238462643383279"), func(o *toon.DecodeOptions) {
+    o.Limits = toon.ResourceLimits{} // number mode is set via EncodeOptions
+})
+
+// String for unsafe values on encode
+n := &toon.Node{Kind: toon.NumberKind, Number: toon.Number{Raw: "1e500"}}
+data, _ := toon.Encode(n, func(o *toon.EncodeOptions) {
+    o.NumberMode = toon.NumberStringForUnsafe
+})
+// Output: 1e500 (quoted as a string)
+```
+
+#### Utility functions
+
+```go
+// Check if a string is a valid unquoted TOON key
+toon.IsValidUnquotedKey("myField")  // true
+toon.IsValidUnquotedKey("123abc")   // false
+
+// Escape a string for TOON output
+toon.EscapeString("hello\nworld")   // "hello\\nworld"
+
+// Check if a string needs quoting
+toon.NeedsQuotes("hello", toon.Comma)  // false
+toon.NeedsQuotes("hello,world", toon.Comma)  // true
+
+// Parse a primitive token
+n, _ := toon.ParsePrimitiveToken("42")  // NumberKind with Raw="42"
+n, _ = toon.ParsePrimitiveToken("true") // BoolKind with Bool=true
+n, _ = toon.ParsePrimitiveToken("null") // NullKind
+
+// Canonicalize a number token
+toon.CanonicalizeNumberToken("007")   // "7"
+toon.CanonicalizeNumberToken("1.200") // "1.2"
+```
+
+#### Error codes
+
+```go
+const (
+    ErrInvalidIndent           ErrorCode = "invalid_indent"
+    ErrTabIndent               ErrorCode = "tab_indent"
+    ErrInvalidEscape           ErrorCode = "invalid_escape"
+    ErrUnterminatedString      ErrorCode = "unterminated_string"
+    ErrArrayCountMismatch      ErrorCode = "array_count_mismatch"
+    ErrTabularWidthMismatch    ErrorCode = "tabular_width_mismatch"
+    ErrDuplicateKey            ErrorCode = "duplicate_key"
+    ErrMalformedHeader         ErrorCode = "malformed_header"
+    ErrHeaderDelimiterMismatch ErrorCode = "header_delimiter_mismatch"
+    ErrMissingColon            ErrorCode = "missing_colon"
+    ErrPathExpansionConflict   ErrorCode = "path_expansion_conflict"
+    ErrResourceLimit           ErrorCode = "resource_limit"
+    ErrInvalidInputFormat      ErrorCode = "invalid_input_format"
+    ErrUnsupportedFeature      ErrorCode = "unsupported_feature"
+    ErrUnsupportedKind         ErrorCode = "unsupported_kind"
+    ErrCyclicValue             ErrorCode = "cyclic_value"
+    ErrUnmarshalType           ErrorCode = "unmarshal_type"
+    ErrNonPointerTarget        ErrorCode = "non_pointer_target"
+)
+```
+
+### Reflection package
 
 ```go
 import "github.com/shepard-labs/go-toon/toon/reflect"
 ```
 
-- `Marshal(w io.Writer, v any, ...Option) error` and `NodeFromValue(v any, ...ValueOption) (*toon.Node, error)` map Go values to ordered `*toon.Node` and TOON bytes.
-- `Unmarshal(data []byte, v any, ...UnmarshalOption) error`, `UnmarshalReader(r io.Reader, v any, ...)`, and `UnmarshalNode(n *toon.Node, v any, ...)` populate a non-nil pointer.
-- `NodeToValue(n *toon.Node, v any, ...)` converts an ordered node into a Go value of your choice.
-- `ValueOptions`, `Options`, and `UnmarshalOptions` are the option sources of truth; functional setters mutate copies and merge into the package defaults.
+#### Marshaling Go values to TOON
 
-Formats package:
+```go
+type User struct {
+    ID    int      `toon:"id"`
+    Name  string   `toon:"name"`
+    Tags  []string `toon:"tags"`
+    Score float64  `toon:"score"`
+}
+
+// Marshal to TOON bytes via a writer
+var buf bytes.Buffer
+err := reflect.Marshal(&buf, User{ID: 42, Name: "Ada", Tags: []string{"a", "b"}, Score: 9.5})
+// buf: "id: 42\nname: Ada\ntags:\n- a\n- b\nscore: 9.5"
+
+// Marshal to a *toon.Node
+node, err := reflect.NodeFromValue(User{ID: 42, Name: "Ada"})
+// node.Kind == toon.ObjectKind
+
+// With custom number mode for non-finite floats
+node, err = reflect.NodeFromValue(math.NaN(), func(o *reflect.ValueOptions) {
+    o.NumberMode = toon.NumberStringForUnsafe
+})
+// node.Kind == toon.StringKind, node.String == "NaN"
+
+// With resource limits
+_, err = reflect.NodeFromValue([]int{1, 2, 3, 4, 5}, func(o *reflect.ValueOptions) {
+    o.Limits = toon.ResourceLimits{MaxArrayLength: 2}
+})
+// err.Code == toon.ErrResourceLimit
+
+// Struct with skipped and unexported fields
+type Record struct {
+    Name     string `toon:"name"`
+    Optional string `toon:"optional,omitempty"` // skipped when empty
+    Skip     string `toon:"-"`                  // skipped
+    hidden   string                              // unexported — skipped
+}
+node, _ = reflect.NodeFromValue(Record{Name: "x", Skip: "y", hidden: "z"})
+// node.Object = [{Key: "name", Value: String("x")}]
+```
+
+#### Custom time formatting
+
+```go
+type Event struct {
+    At time.Time `toon:"at"`
+}
+
+var buf bytes.Buffer
+err := reflect.Marshal(&buf, Event{At: time.Date(2025, 6, 4, 12, 30, 0, 0, time.UTC)}, func(o *reflect.Options) {
+    o.Value.TimeFormatter = func(t time.Time) string {
+        return t.UTC().Format("2006-01-02")
+    }
+})
+// buf: "at: 2025-06-04"
+```
+
+#### Unmarshaling TOON to Go values
+
+```go
+// Unmarshal TOON bytes to a Go value
+var u User
+err := reflect.Unmarshal([]byte("id: 42\nname: Ada\ntags:\n- a\n- b\nscore: 9.5"), &u)
+// u.ID == 42, u.Name == "Ada", u.Tags == []string{"a", "b"}, u.Score == 9.5
+
+// Unmarshal from a reader
+var u2 User
+err = reflect.UnmarshalReader(strings.NewReader("id: 1\nname: Bob"), &u2)
+
+// Unmarshal from an already-decoded node
+n, _ := toon.Decode([]byte("name: Bob\nage: 30"))
+type Person struct {
+    Name string `toon:"name"`
+    Age  int    `toon:"age"`
+}
+var p Person
+err = reflect.UnmarshalNode(n, &p)
+// p.Name == "Bob", p.Age == 30
+
+// With strict mode disabled
+err = reflect.Unmarshal([]byte("id: 1"), &u, func(o *reflect.UnmarshalOptions) {
+    o.Decode.Strict = false
+})
+
+// []byte is encoded as base64
+var b []byte
+n := &toon.Node{Kind: toon.StringKind, String: "SGVsbG8="}
+err = reflect.NodeToValue(n, &b)
+// b == []byte("Hello")
+```
+
+#### TextMarshaler / TextUnmarshaler
+
+```go
+type Timestamp struct {
+    Time time.Time
+}
+
+func (t Timestamp) MarshalText() ([]byte, error) {
+    return []byte(t.Time.Format(time.RFC3339)), nil
+}
+
+func (t *Timestamp) UnmarshalText(b []byte) error {
+    var err error
+    t.Time, err = time.Parse(time.RFC3339, string(b))
+    return err
+}
+
+// MarshalText is honored on encode
+node, _ := reflect.NodeFromValue(Timestamp{Time: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)})
+// node.Kind == toon.StringKind, node.String == "2025-01-01T00:00:00Z"
+
+// UnmarshalText is honored on decode
+var ts Timestamp
+n := &toon.Node{Kind: toon.StringKind, String: "2025-06-04T12:00:00Z"}
+reflect.NodeToValue(n, &ts)
+// ts.Time == time.Date(2025, 6, 4, 12, 0, 0, 0, time.UTC)
+```
+
+#### Cycle detection
+
+```go
+type ListNode struct {
+    Value int
+    Next  *ListNode
+}
+
+a := &ListNode{Value: 1}
+b := &ListNode{Value: 2, Next: a}
+a.Next = b // creates a cycle
+
+_, err := reflect.NodeFromValue(a)
+// err.Code == toon.ErrCyclicValue
+```
+
+### Formats package
 
 ```go
 import "github.com/shepard-labs/go-toon/formats"
 ```
 
-- `formats.FromJSON`, `FromYAML`, `FromCSV`, and `FromXML` normalize inputs into ordered `*toon.Node` values.
-- `formats.ToJSON` writes ordered JSON from a node without routing through Go maps.
-- `formats.JSONToTOON`, `YAMLToTOON`, `CSVToTOON`, `XMLToTOON`, and `TOONToJSON` are high-level conversion helpers.
+#### Parsing JSON
+
+```go
+// Parse JSON into a TOON node
+n, err := formats.FromJSON(strings.NewReader(`{"name":"Ada","age":36,"active":true}`))
+// n.Kind == toon.ObjectKind
+
+// Allow duplicate keys (last value wins)
+n, err = formats.FromJSON(strings.NewReader(`{"a":1,"a":2}`), func(o *formats.JSONOptions) {
+    o.AllowDuplicateKeys = true
+})
+
+// With resource limits
+n, err = formats.FromJSON(strings.NewReader(`{"a":1}`), func(o *formats.JSONOptions) {
+    o.Limits = toon.ResourceLimits{MaxBytes: 1024}
+})
+```
+
+#### Parsing YAML
+
+```go
+// Parse YAML into a TOON node
+n, err := formats.FromYAML(strings.NewReader(`name: Ada
+age: 36
+tags:
+- a
+- b`))
+
+// Multiple documents → array
+n, err = formats.FromYAML(strings.NewReader(`a: 1
+---
+b: 2`), func(o *formats.YAMLOptions) {
+    o.Documents = formats.YAMLDocumentsArray
+})
+// n.Kind == toon.ArrayKind, n.Array has 2 elements
+
+// Force all scalars to strings
+n, err = formats.FromYAML(strings.NewReader(`a: 1`), func(o *formats.YAMLOptions) {
+    o.Scalars = formats.YAMLScalarsString
+})
+// n.Object[0].Value.Kind == toon.StringKind (not NumberKind)
+```
+
+#### Parsing CSV
+
+```go
+// With headers and type inference
+n, err := formats.FromCSV(strings.NewReader(`id,name,zip
+1,Ada,05
+2,Bob,10`), func(o *formats.CSVOptions) {
+    o.HeaderMode = formats.CSVHeaderPresent
+    o.InferTypes = true
+})
+// n.Kind == toon.ArrayKind, n.Array[0] == {id: 1, name: "Ada", zip: "05"}
+
+// Without headers, custom delimiter
+n, err = formats.FromCSV(strings.NewReader(`1|true
+2|false`), func(o *formats.CSVOptions) {
+    o.HeaderMode = formats.CSVHeaderAbsent
+    o.Delimiter = '|'
+    o.InferTypes = false
+})
+// n.Array[0] == {field1: "1", field2: "true"}
+```
+
+#### Parsing XML
+
+```go
+// Parse XML into a TOON node
+n, err := formats.FromXML(strings.NewReader(`<user id="1">Ada</user>`))
+// n.Kind == toon.ObjectKind, n.Object = [{Key: "user", Value: { @id: 1, #text: "Ada" }}]
+
+// Preserve mixed content
+n, err = formats.FromXML(strings.NewReader(`<p>Hello <b>world</b>!</p>`), func(o *formats.XMLOptions) {
+    o.MixedContent = formats.XMLMixedContentPreserve
+})
+// n.Object = [{Key: "p", Value: [{#text: "Hello "}, {b: "world"}, {#text: "!"}]}]
+
+// Namespace-qualified names
+n, err = formats.FromXML(strings.NewReader(`<ns:root xmlns:ns="urn:x"><ns:a>1</ns:a></ns:root>`), func(o *formats.XMLOptions) {
+    o.Namespaces = formats.XMLNamespacesQualified
+})
+// n.Object = [{Key: "ns:root", Value: {ns:a: 1}}]
+```
+
+#### Serializing TOON to JSON
+
+```go
+// Write a TOON node as ordered JSON
+n, _ := formats.FromJSON(strings.NewReader(`{"z":1,"a":{"b":2}}`))
+var out bytes.Buffer
+formats.ToJSON(&out, n)
+// out: {"z":1,"a":{"b":2}}
+
+// With indentation
+formats.ToJSON(&out, n, func(o *formats.JSONOutputOptions) {
+    o.Indent = "  "
+})
+// out:
+// {
+//   "z": 1,
+//   "a": {
+//     "b": 2
+//   }
+// }
+```
+
+#### High-level format conversions
+
+```go
+// JSON → TOON
+var toonOut bytes.Buffer
+formats.JSONToTOON(strings.NewReader(`{"a":1,"b":[2,3]}`), &toonOut, formats.JSONToTOONOptions{})
+// toonOut: "a: 1\nb:\n- 2\n- 3"
+
+// TOON → JSON
+var jsonOut bytes.Buffer
+formats.TOONToJSON(strings.NewReader("a: 1"), &jsonOut,
+    formats.TOONToJSONOptions{JSON: formats.JSONOutputOptions{Indent: "  "}})
+// jsonOut: "{\n  \"a\": 1\n}"
+
+// YAML → TOON
+var out bytes.Buffer
+formats.YAMLToTOON(strings.NewReader("a: 1\nb: 2"), &out, formats.YAMLToTOONOptions{})
+// out: "a: 1\nb: 2"
+
+// XML → TOON
+formats.XMLToTOON(strings.NewReader("<a>1</a>"), &out, formats.XMLToTOONOptions{})
+// out: "a: 1"
+
+// CSV → TOON
+formats.CSVToTOON(strings.NewReader("a\n1\n"), &out,
+    formats.CSVToTOONOptions{CSV: formats.CSVOptions{HeaderMode: formats.CSVHeaderPresent, InferTypes: true}})
+// out: "[1]{a}:\n  1"
+```
 
 ## CLI
 
@@ -91,6 +593,7 @@ Important encode flags:
 
 - `--format json|yaml|xml|csv|auto`
 - `--delimiter comma|tab|pipe`
+- `--length-markers`
 - `--key-folding off|safe`
 - `--flatten-depth N`
 - `--stats`

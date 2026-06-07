@@ -84,6 +84,20 @@ func TestEncodeGoldenDelimitersAndHeaders(t *testing.T) {
 	assertEncode(t, n, "tags[2\t]: a,b\tc|d", func(o *EncodeOptions) { o.Delimiter = Tab })
 }
 
+func TestEncodeGoldenLengthMarkers(t *testing.T) {
+	withMarkers := func(o *EncodeOptions) { o.IncludeLengthMarkers = true }
+	assertEncode(t, arr(str("a"), str("b")), "[#2]: a,b", withMarkers)
+	assertEncode(t, obj(field("tags", arr(str("a"), str("b")))), "tags[#2]: a,b", withMarkers)
+	assertEncode(t, obj(field("tags", arr(str("a,b"), str("c|d")))), "tags[#2|]: a,b|\"c|d\"", func(o *EncodeOptions) {
+		o.IncludeLengthMarkers = true
+		o.Delimiter = Pipe
+	})
+	assertEncode(t, obj(field("items", arr(
+		obj(field("sku", str("A1")), field("qty", num("2"))),
+		obj(field("sku", str("B2")), field("qty", num("1"))),
+	))), "items[#2]{sku,qty}:\n  A1,2\n  B2,1", withMarkers)
+}
+
 func TestEncodeGoldenSafeKeyFolding(t *testing.T) {
 	n := obj(field("a", obj(field("b", obj(field("c", num("1")))))))
 	assertEncode(t, n, "a.b.c: 1", func(o *EncodeOptions) { o.KeyFolding = KeyFoldingSafe })
