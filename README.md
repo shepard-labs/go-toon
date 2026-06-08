@@ -21,32 +21,28 @@ The library exposes `toon.SpecVersion = "3.3"`.
 - 🧰 **Production CLI** — `toon encode`, `decode`, and `validate` with a flag surface mirroring library options.
 - ⚡ **Battle-tested** — race tests, fuzz targets, golden conformance tests, and cross-platform builds for `linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, and `windows/amd64`.
 
-## Comparison With `github.com/toon-format/toon-go`
+## Comparison
 
-This package is broader than the upstream `github.com/toon-format/toon-go` package. It prioritizes an ordered document model, lossless decode behavior, format normalization, validation, resource limits, and CLI workflows. The upstream package prioritizes a compact `encoding/json`-style API for Go-value marshal/unmarshal with fewer moving parts.
-
-| Feature | `github.com/shepard-labs/go-toon` | `github.com/toon-format/toon-go` |
-|---|---:|---:|
-| Primary API style | 🧱 Ordered `*toon.Node` core plus `toon/reflect` | 🪶 Top-level `Marshal` / `Unmarshal` |
-| Decode target | 🧱 Ordered `*toon.Node` | 🗺️ `any`, `map[string]any`, `[]any` |
-| Preserves decoded object order | ✅ Yes | ❌ No |
-| Lossless number tokens on decode | ✅ Yes | ⚠️ No, decodes numbers as `float64` |
-| Struct marshal/unmarshal | ✅ Yes, via `toon/reflect` | ✅ Yes, top-level |
-| `omitempty` struct tags | ✅ Yes | ✅ Yes |
-| Custom `time.Time` formatting | ✅ Yes | ✅ Yes |
-| Optional length markers | ✅ Yes | ✅ Yes |
-| JSON/YAML/CSV/XML to TOON | ✅ Yes | ❌ No |
-| Ordered TOON to JSON | ✅ Yes | ❌ No |
-| CLI | ✅ Yes | ❌ No |
-| Validation-only API | ✅ Yes | ❌ No dedicated API |
-| Typed error codes | ✅ Yes | ❌ No public error-code API |
-| Resource limits | ✅ Yes | ❌ No public resource limits |
-| Key folding / path expansion | ✅ Yes | ❌ No |
-| Reusable encoder/decoder types | ❌ No public core types | ✅ Yes |
-| String convenience APIs | ❌ No core `EncodeString` / `DecodeString` | ✅ Yes |
-| External dependencies | 📦 `gopkg.in/yaml.v3` | ✅ None found |
-
-See [FEATURE_COMPARISON.md](FEATURE_COMPARISON.md) for the detailed comparison.
+| Feature                          |                                          go-toon |                  toon-format/toon-go |
+|----------------------------------|-------------------------------------------------:|-------------------------------------:|
+| Primary API style                | 🧱 Ordered `*toon.Node` core plus `toon/reflect` | 🪶 Top-level `Marshal` / `Unmarshal` |
+| Decode target                    |                          🧱 Ordered `*toon.Node` | 🗺️ `any`, `map[string]any`, `[]any` |
+| Preserves decoded object order   |                                            ✅ Yes |                                 ❌ No |
+| Lossless number tokens on decode |                                            ✅ Yes |  ⚠️ No, decodes numbers as `float64` |
+| Struct marshal/unmarshal         |                        ✅ Yes, via `toon/reflect` |                     ✅ Yes, top-level |
+| `omitempty` struct tags          |                                            ✅ Yes |                                ✅ Yes |
+| Custom `time.Time` formatting    |                                            ✅ Yes |                                ✅ Yes |
+| Optional length markers          |                                            ✅ Yes |                                ✅ Yes |
+| JSON/YAML/CSV/XML to TOON        |                                            ✅ Yes |                                 ❌ No |
+| Ordered TOON to JSON             |                                            ✅ Yes |                                 ❌ No |
+| CLI                              |                                            ✅ Yes |                                 ❌ No |
+| Validation-only API              |                                            ✅ Yes |                   ❌ No dedicated API |
+| Typed error codes                |                                            ✅ Yes |           ❌ No public error-code API |
+| Resource limits                  |                                            ✅ Yes |          ❌ No public resource limits |
+| Key folding / path expansion     |                                            ✅ Yes |                                 ❌ No |
+| Reusable encoder/decoder types   |                           ❌ No public core types |                                ✅ Yes |
+| String convenience APIs          |        ❌ No core `EncodeString` / `DecodeString` |                                ✅ Yes |
+| External dependencies            |                            📦 `gopkg.in/yaml.v3` |                         ✅ None found |
 
 ## Library API
 
@@ -61,7 +57,7 @@ import "github.com/shepard-labs/go-toon/toon"
 - `toon.Node` — the ordered document model. A node can represent any TOON value.
 - `toon.Field` — a key-value pair within an `ObjectKind` node.
 - `toon.Number` — stores the raw string representation of a number for lossless round-trips.
-- `toon.Kind` — the type of a node (`NullKind`, `BoolKind`, `NumberKind`, `StringKind`, `ArrayKind`, `ObjectKind`).
+- `toon.Kind` — the type of node (`NullKind`, `BoolKind`, `NumberKind`, `StringKind`, `ArrayKind`, `ObjectKind`).
 
 #### Encoding
 
