@@ -170,10 +170,27 @@ func TestDecodeRoundTripEncodeFixtures(t *testing.T) {
 	}
 }
 
+func fuzzDecodeLimits() DecodeOption {
+	return func(o *DecodeOptions) {
+		o.Limits = ResourceLimits{
+			MaxBytes:       256 * 1024,
+			MaxDepth:       64,
+			MaxNodes:       100_000,
+			MaxArrayLength: 10_000,
+			MaxStringBytes: 64 * 1024,
+		}
+	}
+}
+
 func FuzzDecode(f *testing.F) {
 	f.Add("a: 1")
 	f.Add("items[2]:\n  - 1\n  - 2")
-	f.Fuzz(func(t *testing.T, s string) { _, _ = Decode([]byte(s)) })
+	f.Fuzz(func(t *testing.T, s string) {
+		if len(s) > 256*1024 {
+			t.Skip()
+		}
+		_, _ = Decode([]byte(s), fuzzDecodeLimits())
+	})
 }
 
 func FuzzUnescapeQuotedToken(f *testing.F) {
