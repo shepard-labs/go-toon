@@ -46,7 +46,7 @@ Fix: Rename, remove, or intentionally merge the duplicate field. Do not silently
 
 Cause: The document uses tab indentation where spaces are required.
 
-Fix: Replace indentation tabs with spaces. This repo defaults to two spaces.
+Fix: Replace indentation tabs with spaces. This repo defaults to two spaces. A `#` line indented with a tab is not a comment.
 
 ## `missing_colon`
 
@@ -55,18 +55,22 @@ Cause: An object field or array header is missing `:`.
 Invalid:
 
 ```toon
+id: 1
 name Ada
 ```
 
 Fixed:
 
 ```toon
+id: 1
 name: Ada
 ```
 
+A document that is a single line with no colon, such as `name Ada`, is a valid root string, not an error.
+
 ## `malformed_header`
 
-Cause: An array or tabular header is malformed.
+Cause: An array or tabular header is malformed. Examples: an empty length `[]`, a leading-zero length `[03]`, an empty field list `{}`, an empty or nameless field entry (`{a,}`, `{a,{b}}`), or unmatched braces.
 
 Invalid:
 
@@ -80,8 +84,30 @@ Fixed:
 items[0]{sku,qty}:
 ```
 
-## `path_expansion_conflict`
+## `invalid_indent`
 
-Cause: Safe path expansion would create a collision between literal and expanded keys.
+Cause: A line is indented by an amount that is not a multiple of the indent size, or is indented deeper than its parent allows.
 
-Fix: Keep dotted keys literal, rename one key, or disable path expansion.
+Invalid:
+
+```toon
+a: 1
+   b: 2
+```
+
+Fixed:
+
+```toon
+a:
+  b: 2
+```
+
+## `invalid_utf8`
+
+Cause: The input contains bytes that are not valid UTF-8. The decoder rejects them in strict and non-strict mode. Encoding a string value or object key with ill-formed UTF-8 (invalid bytes or unpaired surrogates) returns the same error.
+
+Fix: Re-encode the source as UTF-8 and remove binary data from text values.
+
+## Dotted keys
+
+There is no path expansion error. `a.b: 1` is one key named `a.b`, and `path_expansion_conflict` is no longer produced.

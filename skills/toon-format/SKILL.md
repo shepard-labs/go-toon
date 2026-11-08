@@ -1,11 +1,11 @@
 ---
 name: toon-format
-description: Use this whenever the user asks to write, edit, debug, validate, convert, explain, or generate Token-Oriented Object Notation (TOON). This skill is important because TOON is newer than JSON/YAML and agents may otherwise invent invalid syntax. Use it for TOON examples, compact LLM payloads, JSON-to-TOON conversion, TOON-to-JSON conversion, parser errors, go-toon library usage, and any task that mentions TOON, Token-Oriented Object Notation, tabular arrays, key folding, path expansion, or go-toon.
+description: Use this whenever the user asks to write, edit, debug, validate, convert, explain, or generate Token-Oriented Object Notation (TOON). This skill is important because TOON is newer than JSON/YAML and agents may otherwise invent invalid syntax. Use it for TOON examples, compact LLM payloads, JSON-to-TOON conversion, TOON-to-JSON conversion, parser errors, go-toon library usage, and any task that mentions TOON, Token-Oriented Object Notation, tabular arrays, keyed tabular arrays, nested field groups, comments, or go-toon.
 ---
 
 # TOON Format Skill
 
-Use this skill to work with Token-Oriented Object Notation (TOON) safely and accurately.
+Use this skill to work with Token-Oriented Object Notation (TOON) safely and accurately. It targets TOON spec 4.4 (`toon-spec: 4.4`).
 
 TOON is its own data format. Do not treat it as YAML, JSON, markdown, or CSV with different punctuation. When the output matters, validate instead of trusting memory.
 
@@ -29,7 +29,7 @@ Use the strongest available validation path:
 
 For JSON conversion, prefer MCP `json_to_toon` or the go-toon `formats.FromJSON` path. For YAML, CSV, and XML conversion, prefer MCP `yaml_to_toon`, `csv_to_toon`, and `xml_to_toon` when available. These tools use go-toon's own format normalizers and preserve security defaults such as XML DTD rejection and YAML alias cycle rejection. For inspection, use MCP `toon_to_json` or `toon decode`.
 
-Use MCP `toon_examples` when unsure of syntax shape, `toon_error_explain` when validation fails, and `toon_spec_lookup` for concise TOON v3.3 reference notes.
+Use MCP `toon_examples` when unsure of syntax shape, `toon_error_explain` when validation fails, and `toon_spec_lookup` for concise TOON v4.4 reference notes.
 
 ## Core Rules To Remember
 
@@ -38,11 +38,15 @@ Use MCP `toon_examples` when unsure of syntax shape, `toon_error_explain` when v
 - Primitive arrays use headers like `tags[3]: red,green,blue`.
 - Arrays of objects can use list form or tabular form.
 - Tabular arrays look like `items[2]{sku,qty}:` followed by rows.
+- Columns of uniform nested objects use field groups: `users[2]{id,geo{lat,lng}}:` with flat rows.
+- An object of two or more uniform objects uses keyed tabular form: `users[2:]{age,city}:` with rows `alice: 30,Oslo`.
 - Array counts must match the actual item count.
 - Strings can be unquoted only when safe in context.
 - Use `null`, `true`, and `false` exactly for those primitive values.
-- Dotted keys are literal unless path expansion is explicitly enabled.
-- Do not add YAML comments, anchors, aliases, or block scalars unless the TOON spec supports them.
+- Dotted keys are always literal. There is no key folding, path expansion, or `[#N]` length marker.
+- A line whose first non-space character is `#` is a comment. Decoders drop it; the encoder never writes one, and strings starting with `#` are quoted.
+- Do not add YAML anchors, aliases, or block scalars.
+- Text must be valid UTF-8; the encoder returns an error for strings or keys that are not.
 
 ## When Debugging
 
@@ -63,6 +67,7 @@ Key guidance:
 - Use `toon.Encode` and `toon.Decode` for core TOON bytes.
 - Use `formats.FromJSON`, `formats.FromYAML`, `formats.FromCSV`, and `formats.FromXML` for input normalization.
 - Use `formats.ToJSON` for ordered JSON output.
+- Decoded numbers keep their token text in `Number.Raw`, including out-of-range values; pick `EncodeOptions.NumberMode` for how the encoder writes them.
 - Use `toon/reflect` for Go struct convenience APIs.
 - Branch on `toon.CodeOf(err)` or `errors.As`, not error string text.
 

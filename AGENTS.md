@@ -1,6 +1,6 @@
 # Agent Instructions For go-toon
 
-This repository implements Token-Oriented Object Notation (TOON) v3.3 in Go. Treat TOON as a precise data format, not as YAML, JSON, or markdown with different punctuation.
+This repository implements Token-Oriented Object Notation (TOON) v4.4 in Go (`toon-spec: 4.4`, `toon.SpecVersion = "4.4"`). Treat TOON as a precise data format, not as YAML, JSON, or markdown with different punctuation.
 
 ## Project Map
 
@@ -8,6 +8,7 @@ This repository implements Token-Oriented Object Notation (TOON) v3.3 in Go. Tre
 - `toon/reflect/` maps Go values and structs to and from ordered `*toon.Node` trees.
 - `formats/` normalizes JSON, YAML, CSV, and XML into ordered `*toon.Node` values and writes ordered JSON.
 - `cmd/toon/` is the CLI: `toon encode`, `toon decode`, and `toon validate`.
+- `toon/testdata/spec/` holds the vendored TOON v4.4 spec fixtures, run by `toon/spec_fixtures_test.go`; `scripts/sync-spec-fixtures.sh` re-vendors them.
 - `docs/ai/` contains condensed TOON references for AI agents.
 - `skills/toon-format/` contains a portable skill for agents that need to write, debug, or convert TOON.
 - `mcp/go-toon-mcp/` exposes this repo's validator and converters to MCP-compatible agents.
@@ -22,6 +23,10 @@ This repository implements Token-Oriented Object Notation (TOON) v3.3 in Go. Tre
 - XML DTDs and external entities remain blocked.
 - YAML aliases must reject cycles.
 - Resource limits must remain configurable and safe for untrusted input.
+- Dotted keys are always literal. `KeyFolding`, `FlattenDepth`, `IncludeLengthMarkers`, and `ExpandPaths` are deprecated no-op fields; do not reintroduce behavior behind them.
+- Decode keeps numeric tokens losslessly in `Number.Raw`, including out-of-range values. Encoder number modes (`NumberLossless`, `NumberFloat64`, `NumberStringForUnsafe`) decide how they are written.
+- Decode rejects ill-formed UTF-8 (`invalid_utf8`); encoding strings or keys with ill-formed UTF-8 returns an error.
+- Non-strict decode applies only the five recoveries of spec §14.4.
 - Patch releases must not change canonical output except to fix spec-compliance bugs.
 
 ## Stable API Surface
@@ -45,7 +50,7 @@ TOON is newer than common formats, so do not rely on memory alone for non-trivia
 - If the MCP server is available, use `toon_validate` for hand-written TOON.
 - For JSON input, prefer `json_to_toon` or the `formats.FromJSON` path over manual conversion.
 - For debugging, convert TOON to ordered JSON with `toon_to_json` to inspect structure.
-- Do not introduce syntax not covered by TOON v3.3.
+- Do not introduce syntax not covered by TOON v4.4. Comment lines (`#` as the first non-space character) are valid TOON; key folding, path expansion, and `[#N]` length markers are not.
 
 ## Editing Guidance
 
@@ -94,4 +99,5 @@ go build ./mcp/go-toon-mcp
 - CLI changes: `cmd/toon/main_test.go`.
 - MCP changes: `mcp/go-toon-mcp/*_test.go`.
 - Number canonicalization: `toon/foundation_test.go` and `toon/encode_test.go`.
+- Spec conformance: `toon/spec_fixtures_test.go` with the vendored fixtures in `toon/testdata/spec/`.
 - Resource limits: positive and rejection tests in the affected package.

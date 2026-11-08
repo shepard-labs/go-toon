@@ -1,6 +1,6 @@
 # Contributing to go-toon
 
-Thanks for your interest in contributing to `go-toon`, a Go implementation of Token-Oriented Object Notation (TOON) v3.3.
+Thanks for your interest in contributing to `go-toon`, a Go implementation of Token-Oriented Object Notation (TOON) v4.4.
 
 This guide describes the workflow, conventions, and verification gates contributors are expected to follow.
 
@@ -12,9 +12,10 @@ Be respectful and constructive. Focus on the technical merits of changes. Report
 
 `go-toon` provides:
 
-- An ordered-node library (`toon` package) implementing TOON v3.3.
+- An ordered-node library (`toon` package) implementing TOON v4.4.
 - Format normalization helpers (`formats` package) for JSON, YAML, CSV, and XML.
 - A `toon` CLI (`cmd/toon`) that wraps the library.
+- Struct and value mapping (`toon/reflect`) onto the ordered node model.
 
 Out of scope:
 
@@ -28,7 +29,7 @@ If a proposal does not fit the scope above, open an issue before writing code.
 
 Contributors should follow the normative TOON behavior described in:
 
-- TOON format specification: `toon-format/spec`, `SPEC.md`, version `3.3`, dated `2026-05-21`.
+- TOON format specification: `toon-format/spec`, `SPEC.md`, version `4.4`, dated `2026-10-08`.
 - Reference implementation: `toon-format/toon`, TypeScript package `packages/toon`.
 - Reference CLI behavior: `toon-format/toon`, TypeScript package `packages/cli`.
 
@@ -60,8 +61,11 @@ go build ./cmd/toon
 ## Repository Layout
 
 - `toon/` — core library: ordered node model, encoder, decoder, errors, limits, number canonicalization.
+- `toon/reflect/` — Go value and struct mapping to and from ordered nodes.
 - `formats/` — JSON, YAML, CSV, XML normalization and ordered JSON output.
 - `cmd/toon/` — CLI entry point.
+- `mcp/go-toon-mcp/` — MCP server exposing the validator and converters.
+- `scripts/` — maintenance scripts, including `sync-spec-fixtures.sh`.
 - `.github/workflows/` — CI definitions.
 
 ## Workflow
@@ -105,7 +109,8 @@ Determinism:
 Security defaults:
 
 - Strict TOON decode is on by default.
-- Safe key folding and safe path expansion are off by default.
+- Dotted keys are always literal; key folding and path expansion do not exist.
+- Ill-formed UTF-8 is rejected on decode, and on encode for string values and keys.
 - JSON duplicate keys are rejected by default.
 - XML DTDs are rejected and external entities are not enabled.
 - YAML aliases resolve through the AST with cycle rejection.
@@ -121,6 +126,7 @@ Required coverage by area:
 
 - Encoder changes: add or update goldens in `toon/encode_test.go` and `toon/conformance_test.go`.
 - Decoder changes: positive and strict-negative cases in `toon/decode_test.go` and `toon/conformance_test.go`.
+- Spec conformance: `toon/spec_fixtures_test.go` runs the vendored TOON v4.4 fixtures from `toon/testdata/spec/`. Re-vendor them with `scripts/sync-spec-fixtures.sh [tag]`.
 - Format normalization changes: `formats/formats_test.go` with round trips where applicable.
 - CLI changes: `cmd/toon/main_test.go` integration tests.
 - Number canonicalization: `toon/foundation_test.go`, `toon/encode_test.go`.
@@ -169,6 +175,7 @@ Update documentation in the same PR as the behavior change:
 - Public API changes: `README.md` Library API or CLI section.
 - New options or flags: `README.md`.
 - Default or security changes: `README.md` Defaults And Security.
+- User-visible changes: an entry in `CHANGELOG.md`.
 
 Do not create new top-level documentation files for changes that fit into existing files.
 

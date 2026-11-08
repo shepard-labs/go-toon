@@ -44,6 +44,66 @@ items[2]{sku,qty,price}:
   B2,1,14.5
 ```
 
+## Nested Field Groups
+
+```toon
+users[2]{id,name,geo{lat,lng}}:
+  1,Ada,1.5,2.5
+  2,Linus,3,4
+```
+
+## Keyed Tabular Array
+
+```toon
+users[2:]{age,city}:
+  alice: 30,Oslo
+  bob: 25,Rome
+```
+
+## Keyed Tabular Root
+
+```toon
+[2:]{age,city}:
+  alice: 30,Oslo
+  bob: 25,Rome
+```
+
+## List Items With Nested Arrays
+
+```toon
+items[4]:
+  - id: 1
+    tags[2]: a,b
+  - id: 2
+  - [2]: 1,2
+  - [0]:
+```
+
+## Pipe Delimiter
+
+```toon
+items[2|]{sku|qty}:
+  A1|2
+  B2|1
+```
+
+## Comments
+
+```toon
+# users
+name: Ada
+# trailing note
+age: 36
+```
+
+## Dotted Key
+
+```toon
+a.b: 1
+```
+
+This is one literal key, `a.b`.
+
 ## Quoted Strings
 
 ```toon
@@ -51,6 +111,7 @@ title: "Hello, world"
 literal_bool: "true"
 literal_null: "null"
 path: "a:b"
+note: "#hash"
 ```
 
 ## JSON To TOON

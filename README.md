@@ -3,14 +3,20 @@
 [![CI](https://github.com/shepard-labs/go-toon/actions/workflows/ci.yml/badge.svg)](https://github.com/shepard-labs/go-toon/actions/workflows/ci.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/shepard-labs/go-toon/toon.svg)](https://pkg.go.dev/github.com/shepard-labs/go-toon/toon)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/shepard-labs/go-toon)](https://github.com/shepard-labs/go-toon)
-[![TOON Spec](https://img.shields.io/badge/TOON-v3.3-blueviolet)](https://github.com/toon-format/spec/blob/main/SPEC.md)
+[![TOON Spec](https://img.shields.io/badge/TOON-v4.4-blueviolet)](https://github.com/toon-format/spec/blob/main/SPEC.md)
 [![Ask DeepWiki](https://static.shepardlabs.com/badge.svg)](https://deepwiki.com/shepard-labs/go-toon)
 
-`go-toon` is a Go implementation of Token-Oriented Object Notation (TOON) v3.3. It provides an ordered-node library, format normalization helpers, ordered JSON output, and a `toon` CLI.
+`go-toon` is a Go implementation of Token-Oriented Object Notation (TOON) v4.4. It provides an ordered-node library, format normalization helpers, ordered JSON output, and a `toon` CLI.
 
 The TOON specification this implementation follows lives at [toon-format/spec/SPEC.md](https://github.com/toon-format/spec/blob/main/SPEC.md).
 
-The library exposes `toon.SpecVersion = "3.3"`.
+The library exposes `toon.SpecVersion = "4.4"`.
+
+```
+toon-spec: 4.4
+```
+
+See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
 ## Demo
 
@@ -24,11 +30,12 @@ Try conversions in the browser:
 
 ## Features
 
-- 🚀 **TOON v3.3 compliant** — encoder, decoder, and validator follow the [TOON spec](https://github.com/toon-format/spec/blob/main/SPEC.md).
+- 🚀 **TOON v4.4 compliant** — encoder, decoder, and validator follow the [TOON spec](https://github.com/toon-format/spec/blob/main/SPEC.md) and run against the vendored spec fixtures.
+- 🧩 **v4 syntax** — keyed tabular arrays, nested field groups, `#` comment lines, and the v4 list-item layout.
 - 📦 **Ordered document model** — `toon.Node` preserves field order end-to-end; Go `map` is never the primary representation.
 - 🔄 **Format normalization** — convert JSON, YAML, CSV, and XML into ordered `*toon.Node` values, plus ordered JSON output that bypasses Go maps.
 - 🛡️ **Security-first defaults** — strict decode on, JSON duplicate keys rejected, XML DTDs and external entities blocked, YAML alias cycle detection, configurable resource limits.
-- 🔢 **Lossless numbers** — raw decimal token preservation by default, with explicit opt-ins for `float64` and safe-string fallbacks for unsafe values.
+- 🔢 **Lossless numbers** — raw decimal token preservation by default, including out-of-range values, with explicit opt-ins for `float64` and safe-string fallbacks for unsafe values.
 - 🧰 **Production CLI** — `toon encode`, `decode`, and `validate` with a flag surface mirroring library options.
 - ⚡ **Battle-tested** — race tests, fuzz targets, golden conformance tests, and cross-platform builds for `linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, and `windows/amd64`.
 
@@ -43,14 +50,12 @@ Try conversions in the browser:
 | Struct marshal/unmarshal         |                        ✅ Yes, via `toon/reflect` |                     ✅ Yes, top-level |
 | `omitempty` struct tags          |                                            ✅ Yes |                                ✅ Yes |
 | Custom `time.Time` formatting    |                                            ✅ Yes |                                ✅ Yes |
-| Optional length markers          |                                            ✅ Yes |                                ✅ Yes |
 | JSON/YAML/CSV/XML to TOON        |                                            ✅ Yes |                                 ❌ No |
 | Ordered TOON to JSON             |                                            ✅ Yes |                                 ❌ No |
 | CLI                              |                                            ✅ Yes |                                 ❌ No |
 | Validation-only API              |                                            ✅ Yes |                   ❌ No dedicated API |
 | Typed error codes                |                                            ✅ Yes |           ❌ No public error-code API |
 | Resource limits                  |                                            ✅ Yes |          ❌ No public resource limits |
-| Key folding / path expansion     |                                            ✅ Yes |                                 ❌ No |
 | Reusable encoder/decoder types   |                           ❌ No public core types |                                ✅ Yes |
 | String convenience APIs          |        ❌ No core `EncodeString` / `DecodeString` |                                ✅ Yes |
 | External dependencies            |                            📦 `gopkg.in/yaml.v3` |                         ✅ None found |
@@ -99,12 +104,13 @@ data, err = toon.Encode(n, func(o *toon.EncodeOptions) {
     o.IndentSize = 4
 })
 
-// With optional length markers in array headers
+// With a tab or pipe document delimiter (declared in every array header)
 data, err = toon.Encode(n, func(o *toon.EncodeOptions) {
-    o.IncludeLengthMarkers = true
+    o.Delimiter = toon.Pipe
 })
-// items[#2]{sku,qty,price}:
 ```
+
+Encoding returns an `invalid_utf8` error when a string value or object key contains ill-formed UTF-8 (invalid bytes or unpaired surrogates).
 
 #### Decoding
 
@@ -118,12 +124,10 @@ n, err = toon.DecodeReader(strings.NewReader("id: 1"))
 // Validate without decoding
 err = toon.Validate([]byte("id: 1"))
 
-// With path expansion (dot-separated keys become nested objects)
-n, err = toon.Decode([]byte("a.b: 1"), func(o *toon.DecodeOptions) {
-    o.ExpandPaths = toon.ExpandPathsSafe
-})
+// Dotted keys are always literal: "a.b: 1" decodes to the single key "a.b"
+n, err = toon.Decode([]byte("a.b: 1"))
 
-// With strict mode disabled
+// With strict mode disabled (applies only the spec's non-strict recoveries)
 n, err = toon.Decode([]byte("id: 1"), func(o *toon.DecodeOptions) {
     o.Strict = false
 })
@@ -187,29 +191,60 @@ data, _ := toon.Encode(n)
 // Output: items[2]{sku,qty,price}:\n  A1,2,9.99\n  B2,1,14.5
 ```
 
-#### Key folding
+#### Keyed tabular arrays
 
-```go
-n := &toon.Node{
-    Kind: toon.ObjectKind,
-    Object: []toon.Field{
-        {Key: "a", Value: &toon.Node{
-            Kind: toon.ObjectKind,
-            Object: []toon.Field{
-                {Key: "b", Value: &toon.Node{
-                    Kind: toon.ObjectKind,
-                    Object: []toon.Field{
-                        {Key: "c", Value: &toon.Node{Kind: toon.NumberKind, Number: toon.Number{Raw: "1"}}},
-                    },
-                }},
-            },
-        }},
-    },
-}
-data, _ := toon.Encode(n, func(o *toon.EncodeOptions) {
-    o.KeyFolding = toon.KeyFoldingSafe
-})
-// Output: a.b.c: 1
+An object with two or more entries whose values are all non-empty objects with the same keys encodes as a keyed tabular array. Each entry row starts with the entry key:
+
+```toon
+users[2:]{age,city}:
+  alice: 30,Oslo
+  bob: 25,Rome
+```
+
+At the document root the header has no key:
+
+```toon
+[2:]{age,city}:
+  alice: 30,Oslo
+  bob: 25,Rome
+```
+
+Both forms decode back to ordered objects (`{"alice": {...}, "bob": {...}}`).
+
+#### Nested field groups
+
+Columns that hold uniform nested objects are written as a field group inside the header, and each row stays flat. Cells are listed depth-first:
+
+```toon
+users[2]{id,name,geo{lat,lng}}:
+  1,Ada,1.5,2.5
+  2,Linus,3,4
+```
+
+Groups nest further, for example `rows[2]{id,a{b{c,d}}}:`.
+
+#### Comments
+
+A line whose first non-space character is `#` is a comment. Decoders drop it before any other processing. The encoder never writes comments, and quotes strings that start with `#`.
+
+```toon
+# users
+name: Ada
+# trailing note
+age: 36
+```
+
+#### List items
+
+The first field of an object list item always sits on the hyphen line, and an empty object is a bare `-`:
+
+```toon
+items[4]:
+  - id: 1
+    tags[2]: a,b
+  - id: 2
+  - [2]: 1,2
+  - [0]:
 ```
 
 #### Number modes
@@ -219,17 +254,23 @@ data, _ := toon.Encode(n, func(o *toon.EncodeOptions) {
 n, _ := toon.Decode([]byte("pi: 3.141592653589793238462643383279"))
 // n.Object[0].Value.Number.Raw == "3.141592653589793238462643383279"
 
-// Float64 — may lose precision
-n, _ = toon.Decode([]byte("pi: 3.141592653589793238462643383279"), func(o *toon.DecodeOptions) {
-    o.Limits = toon.ResourceLimits{} // number mode is set via EncodeOptions
-})
+// Out-of-range values decode as well: the decoder keeps the token text in Raw
+n, _ = toon.Decode([]byte("big: 1e500"))
+// n.Object[0].Value.Number.Raw == "1e500"
+
+// Lossless encode (default) writes the canonical decimal token
+data, _ := toon.Encode(&toon.Node{Kind: toon.NumberKind, Number: toon.Number{Raw: "1e500"}})
+// Output: 1e+500
+
+// Float64 — rounds through float64; values outside the float64 range return an error
+data, err := toon.Encode(&toon.Node{Kind: toon.NumberKind, Number: toon.Number{Raw: "3.141592653589793238462643383279"}},
+    func(o *toon.EncodeOptions) { o.NumberMode = toon.NumberFloat64 })
+// Output: 3.141592653589793
 
 // String for unsafe values on encode
-n := &toon.Node{Kind: toon.NumberKind, Number: toon.Number{Raw: "1e500"}}
-data, _ := toon.Encode(n, func(o *toon.EncodeOptions) {
-    o.NumberMode = toon.NumberStringForUnsafe
-})
-// Output: 1e500 (quoted as a string)
+data, _ = toon.Encode(&toon.Node{Kind: toon.NumberKind, Number: toon.Number{Raw: "1e500"}},
+    func(o *toon.EncodeOptions) { o.NumberMode = toon.NumberStringForUnsafe })
+// Output: "1e+500" (quoted string)
 ```
 
 #### Utility functions
@@ -252,7 +293,7 @@ n, _ = toon.ParsePrimitiveToken("true") // BoolKind with Bool=true
 n, _ = toon.ParsePrimitiveToken("null") // NullKind
 
 // Canonicalize a number token
-toon.CanonicalizeNumberToken("007")   // "7"
+toon.CanonicalizeNumberToken("1e3")   // "1000"
 toon.CanonicalizeNumberToken("1.200") // "1.2"
 ```
 
@@ -261,6 +302,7 @@ toon.CanonicalizeNumberToken("1.200") // "1.2"
 ```go
 const (
     ErrInvalidIndent           ErrorCode = "invalid_indent"
+    ErrInvalidUTF8             ErrorCode = "invalid_utf8"
     ErrTabIndent               ErrorCode = "tab_indent"
     ErrInvalidEscape           ErrorCode = "invalid_escape"
     ErrUnterminatedString      ErrorCode = "unterminated_string"
@@ -270,7 +312,7 @@ const (
     ErrMalformedHeader         ErrorCode = "malformed_header"
     ErrHeaderDelimiterMismatch ErrorCode = "header_delimiter_mismatch"
     ErrMissingColon            ErrorCode = "missing_colon"
-    ErrPathExpansionConflict   ErrorCode = "path_expansion_conflict"
+    ErrPathExpansionConflict   ErrorCode = "path_expansion_conflict" // no longer produced
     ErrResourceLimit           ErrorCode = "resource_limit"
     ErrInvalidInputFormat      ErrorCode = "invalid_input_format"
     ErrUnsupportedFeature      ErrorCode = "unsupported_feature"
@@ -300,7 +342,19 @@ type User struct {
 // Marshal to TOON bytes via a writer
 var buf bytes.Buffer
 err := reflect.Marshal(&buf, User{ID: 42, Name: "Ada", Tags: []string{"a", "b"}, Score: 9.5})
-// buf: "id: 42\nname: Ada\ntags:\n- a\n- b\nscore: 9.5"
+// buf: "id: 42\nname: Ada\ntags[2]: a,b\nscore: 9.5"
+
+// Slices of structs with nested structs encode as nested field groups
+type Geo struct{ Lat, Lng float64 }
+type Place struct {
+    ID  int `toon:"id"`
+    Geo Geo `toon:"geo"`
+}
+buf.Reset()
+err = reflect.Marshal(&buf, map[string]any{"places": []Place{{1, Geo{1, 2}}, {2, Geo{3, 4}}}})
+// places[2]{id,geo{Lat,Lng}}:
+//   1,1,2
+//   2,3,4
 
 // Marshal to a *toon.Node
 node, err := reflect.NodeFromValue(User{ID: 42, Name: "Ada"})
@@ -350,7 +404,7 @@ err := reflect.Marshal(&buf, Event{At: time.Date(2025, 6, 4, 12, 30, 0, 0, time.
 ```go
 // Unmarshal TOON bytes to a Go value
 var u User
-err := reflect.Unmarshal([]byte("id: 42\nname: Ada\ntags:\n- a\n- b\nscore: 9.5"), &u)
+err := reflect.Unmarshal([]byte("id: 42\nname: Ada\ntags[2]: a,b\nscore: 9.5"), &u)
 // u.ID == 42, u.Name == "Ada", u.Tags == []string{"a", "b"}, u.Score == 9.5
 
 // Unmarshal from a reader
@@ -542,7 +596,7 @@ formats.ToJSON(&out, n, func(o *formats.JSONOutputOptions) {
 // JSON → TOON
 var toonOut bytes.Buffer
 formats.JSONToTOON(strings.NewReader(`{"a":1,"b":[2,3]}`), &toonOut, formats.JSONToTOONOptions{})
-// toonOut: "a: 1\nb:\n- 2\n- 3"
+// toonOut: "a: 1\nb[2]: 2,3"
 
 // TOON → JSON
 var jsonOut bytes.Buffer
@@ -587,7 +641,8 @@ Decode TOON to ordered JSON:
 
 ```sh
 toon decode input.toon
-toon decode input.toon --expand-paths safe --indent 4
+toon decode input.toon --indent 4
+toon decode input.toon --strict=false
 ```
 
 Validate TOON:
@@ -600,9 +655,7 @@ Important encode flags:
 
 - `--format json|yaml|xml|csv|auto`
 - `--delimiter comma|tab|pipe`
-- `--length-markers`
-- `--key-folding off|safe`
-- `--flatten-depth N`
+- `--indent N`
 - `--stats`
 - `--csv-header auto|present|absent`
 - `--csv-delimiter CHAR`
@@ -618,10 +671,14 @@ Important encode flags:
 
 ## Defaults And Security
 
-- TOON decode strict mode is enabled by default.
-- Safe path expansion is off by default.
-- Safe key folding is off by default.
+- TOON decode strict mode is enabled by default, including when `formats.TOONToJSONOptions.Decode` sets other fields such as `Limits`; set `formats.TOONToJSONOptions.NonStrict` to turn it off.
+- Strict and non-strict decode both reject ill-formed UTF-8 (`invalid_utf8`); non-strict mode applies only the five recoveries listed in SPEC §14.4.
+- Dotted keys are always literal; there is no key folding or path expansion.
 - Number handling defaults to lossless raw tokens.
+- Out-of-range numbers (for example `1e500`) decode with their token text kept in `Number.Raw`; the encoder's number mode decides how they are written (see Number Modes).
+- Encoding a string value or object key that contains ill-formed UTF-8 returns an `invalid_utf8` error.
+- `#` comment lines are dropped by the decoder; the encoder never emits comments.
+- JSON input containing a lone surrogate escape is rejected instead of being replaced with U+FFFD.
 - JSON duplicate keys are rejected by default.
 - CSV library callers must choose header-present or header-absent mode explicitly; the CLI treats `auto` as header-present for normal CSV workflows.
 - XML DTDs are rejected and external entity processing is not enabled.
@@ -634,11 +691,23 @@ Important encode flags:
 - `toon/reflect` `TextMarshaler` is honored on encode; `TextUnmarshaler` is honored on decode as an escape hatch.
 - `toon/reflect` decode propagates `toon.Decode` errors (e.g., `ErrInvalidIndent`, `ErrDuplicateKey`) with their original code via `toon.CodeOf`.
 
+## Deprecated Options
+
+These fields remain on the option structs and are ignored by the encoder and decoder: `EncodeOptions.IncludeLengthMarkers`, `EncodeOptions.KeyFolding`, `EncodeOptions.FlattenDepth`, and `DecodeOptions.ExpandPaths`. The CLI has no flags for them, and neither do the MCP tools.
+
 ## Number Modes
 
-- `toon.NumberLossless` preserves decimal tokens where possible and canonicalizes without unsafe `float64` conversion.
-- `toon.NumberFloat64` may round through `float64`; use it only when precision loss is acceptable.
-- `toon.NumberStringForUnsafe` emits quoted strings for numbers outside the safe canonicalization domain.
+Decoding never converts numbers: every numeric token keeps its text in `toon.Number.Raw`, including values outside the `float64` range such as `1e500` or `1e-400`, in strict and non-strict mode.
+
+Encoding follows `EncodeOptions.NumberMode`:
+
+| Mode | Behavior |
+|---|---|
+| `toon.NumberLossless` (default) | Writes the canonical decimal token without `float64` conversion (`1.200` → `1.2`, `1e500` → `1e+500`). |
+| `toon.NumberFloat64` | Rounds through `float64` (`12345678901234567890` → `12345678901234567000`). Values outside the `float64` range return an error. |
+| `toon.NumberStringForUnsafe` | Writes numbers outside the `float64` range as quoted strings (`"1e+500"`, `"1e-400"`). |
+
+Numbers outside `[1e-6, 1e21)` are written in exponent form (`1e-7`, `1e+21`); all others are plain decimals.
 
 Patch releases must not change canonical output except to fix spec-compliance bugs.
 
@@ -649,6 +718,7 @@ JSON:
 - Uses `json.Decoder.Token()` with `UseNumber()`.
 - Preserves object order.
 - Rejects duplicate keys unless explicitly allowed, in which case deterministic last-write-wins applies.
+- Rejects lone surrogate escapes.
 
 YAML:
 
@@ -698,6 +768,8 @@ go test ./toon/reflect -run=Fuzz -fuzz=FuzzMarshalValue -fuzztime=10s
 go test ./toon/reflect -run=Fuzz -fuzz=FuzzUnmarshalValue -fuzztime=10s
 go test ./... -bench=. -run='^$'
 ```
+
+`go test ./toon` also runs the vendored TOON v4.4 spec fixtures in `toon/testdata/spec/`. Re-vendor them with `scripts/sync-spec-fixtures.sh [tag]` (pinned to `v4.4.0`).
 
 Supported build-check targets for `cmd/toon`:
 
