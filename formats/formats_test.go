@@ -67,6 +67,20 @@ func TestJSONScannerEdges(t *testing.T) {
 	}
 }
 
+func TestJSONLoneSurrogateEscapes(t *testing.T) {
+	for _, input := range []string{
+		`{"s":"\ud800"}`,
+		`{"s":"\udc00"}`,
+		`{"s":"\ud800x"}`,
+		`{"s":"\ud800\u0041"}`,
+		`{"\ud800":1}`,
+	} {
+		if _, err := FromJSON(strings.NewReader(input)); toon.CodeOf(err) != toon.ErrInvalidInputFormat {
+			t.Fatalf("FromJSON(%q) CodeOf = %q, err %v", input, toon.CodeOf(err), err)
+		}
+	}
+}
+
 func TestYAMLInput(t *testing.T) {
 	n, err := FromYAML(strings.NewReader("z: 1\na: true\nts: 2024-01-02\n? [x, y]\n: v\n"))
 	if err != nil {
@@ -168,6 +182,23 @@ func TestHighLevelConversions(t *testing.T) {
 		t.Fatalf("TOONToJSON = %q", jsonOut.String())
 	}
 
+	// Strict is the default, also when other decode fields are set; NonStrict opts out.
+	jsonOut.Reset()
+	if err := TOONToJSON(strings.NewReader("a: 1\na: 2"), &jsonOut, TOONToJSONOptions{}); toon.CodeOf(err) != toon.ErrDuplicateKey {
+		t.Fatalf("TOONToJSON zero options CodeOf = %q, err %v", toon.CodeOf(err), err)
+	}
+	jsonOut.Reset()
+	if err := TOONToJSON(strings.NewReader("a: 1\na: 2"), &jsonOut, TOONToJSONOptions{Decode: toon.DecodeOptions{IndentSize: 4}}); toon.CodeOf(err) != toon.ErrDuplicateKey {
+		t.Fatalf("TOONToJSON with IndentSize only CodeOf = %q, err %v", toon.CodeOf(err), err)
+	}
+	jsonOut.Reset()
+	if err := TOONToJSON(strings.NewReader("a: 1\na: 2"), &jsonOut, TOONToJSONOptions{NonStrict: true, Decode: toon.DecodeOptions{Limits: toon.ResourceLimits{MaxNodes: 100}}}); err != nil {
+		t.Fatalf("TOONToJSON non-strict error: %v", err)
+	}
+	if jsonOut.String() != `{"a":2}` {
+		t.Fatalf("TOONToJSON non-strict = %q", jsonOut.String())
+	}
+
 	var out bytes.Buffer
 	if err := YAMLToTOON(strings.NewReader("a: 1"), &out, YAMLToTOONOptions{}); err != nil || out.String() != "a: 1" {
 		t.Fatalf("YAMLToTOON = %q, %v", out.String(), err)
@@ -179,6 +210,13 @@ func TestHighLevelConversions(t *testing.T) {
 	out.Reset()
 	if err := XMLToTOON(strings.NewReader("<a>1</a>"), &out, XMLToTOONOptions{}); err != nil || out.String() != "a: 1" {
 		t.Fatalf("XMLToTOON = %q, %v", out.String(), err)
+	}
+	out.Reset()
+	if err := JSONToTOON(strings.NewReader(`{"u":[{"id":1,"n":"a"},{"id":2,"n":"b"}],"o":{"p":{"q":1}}}`), &out, JSONToTOONOptions{}); err != nil {
+		t.Fatalf("JSONToTOON nested error: %v", err)
+	}
+	if want := "u[2]{id,n}:\n  1,a\n  2,b\no:\n  p:\n    q: 1"; out.String() != want {
+		t.Fatalf("JSONToTOON nested = %q, want %q", out.String(), want)
 	}
 }
 
@@ -207,3 +245,27 @@ func str(s string) *toon.Node    { return &toon.Node{Kind: toon.StringKind, Stri
 func num(s string) *toon.Node    { return &toon.Node{Kind: toon.NumberKind, Number: toon.Number{Raw: s}} }
 func boolNode(v bool) *toon.Node { return &toon.Node{Kind: toon.BoolKind, Bool: v} }
 func nullNode() *toon.Node       { return &toon.Node{Kind: toon.NullKind} }
+
+func TestToJSONKeepsOutOfRangeExponent(t *testing.T) {
+	for _, raw := range []string{"12e9223372036854775807", "1.5e-99999999999999999999"} {
+		var out bytes.Buffer
+		if err := ToJSON(&out, num(raw)); err != nil || out.String() != raw {
+			t.Fatalf("ToJSON(%q) = %q, %v", raw, out.String(), err)
+		}
+		out.Reset()
+		if err := TOONToJSON(strings.NewReader("a: "+raw), &out, TOONToJSONOptions{}); err != nil || out.String() != `{"a":`+raw+`}` {
+			t.Fatalf("TOONToJSON(%q) = %q, %v", raw, out.String(), err)
+		}
+	}
+}
+
+func TestTOONToJSONHonorsMaxBytes(t *testing.T) {
+	opts := TOONToJSONOptions{Decode: toon.DecodeOptions{Limits: toon.ResourceLimits{MaxBytes: 8}}}
+	var out bytes.Buffer
+	if err := TOONToJSON(strings.NewReader("a: 1"), &out, opts); err != nil {
+		t.Fatalf("input within the limit: %v", err)
+	}
+	if err := TOONToJSON(strings.NewReader("a: 1\nb: 2\nc: 3"), &out, opts); toon.CodeOf(err) != toon.ErrResourceLimit {
+		t.Fatalf("CodeOf = %q, err %v", toon.CodeOf(err), err)
+	}
+}

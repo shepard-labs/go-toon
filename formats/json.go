@@ -257,12 +257,11 @@ func (p *jsonParser) parseUnicodeEscape() (rune, error) {
 			if utf16IsLowSurrogate(lo) {
 				return utf16DecodeRune(r, lo), nil
 			}
-			return utf8.RuneError, nil
 		}
-		return utf8.RuneError, nil
+		return 0, p.errf("lone surrogate in JSON unicode escape")
 	}
 	if utf16IsLowSurrogate(r) {
-		return utf8.RuneError, nil
+		return 0, p.errf("lone surrogate in JSON unicode escape")
 	}
 	return r, nil
 }

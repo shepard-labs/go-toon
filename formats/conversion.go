@@ -43,7 +43,7 @@ func CSVToTOON(r io.Reader, w io.Writer, opts CSVToTOONOptions) error {
 }
 
 func TOONToJSON(r io.Reader, w io.Writer, opts TOONToJSONOptions) error {
-	n, err := toon.DecodeReader(r, func(o *toon.DecodeOptions) { mergeDecodeOptions(o, opts.Decode) })
+	n, err := toon.DecodeReader(r, func(o *toon.DecodeOptions) { mergeDecodeOptions(o, opts.Decode, opts.NonStrict) })
 	if err != nil {
 		return err
 	}
@@ -57,15 +57,6 @@ func mergeEncodeOptions(dst *toon.EncodeOptions, src toon.EncodeOptions) {
 	if src.Delimiter != 0 {
 		dst.Delimiter = src.Delimiter
 	}
-	if src.IncludeLengthMarkers {
-		dst.IncludeLengthMarkers = true
-	}
-	if src.KeyFolding != 0 {
-		dst.KeyFolding = src.KeyFolding
-	}
-	if src.FlattenDepth != 0 {
-		dst.FlattenDepth = src.FlattenDepth
-	}
 	if src.NumberMode != 0 {
 		dst.NumberMode = src.NumberMode
 	}
@@ -74,15 +65,15 @@ func mergeEncodeOptions(dst *toon.EncodeOptions, src toon.EncodeOptions) {
 	}
 }
 
-func mergeDecodeOptions(dst *toon.DecodeOptions, src toon.DecodeOptions) {
+// mergeDecodeOptions overlays src on dst. src.Strict is ignored because its
+// zero value cannot be told from an explicit false: strict stays on unless
+// nonStrict is set.
+func mergeDecodeOptions(dst *toon.DecodeOptions, src toon.DecodeOptions, nonStrict bool) {
 	if src.IndentSize != 0 {
 		dst.IndentSize = src.IndentSize
 	}
-	if !src.Strict {
+	if nonStrict {
 		dst.Strict = false
-	}
-	if src.ExpandPaths != 0 {
-		dst.ExpandPaths = src.ExpandPaths
 	}
 	if src.Limits != (toon.ResourceLimits{}) {
 		dst.Limits = src.Limits

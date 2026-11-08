@@ -104,8 +104,13 @@ type CSVToTOONOptions struct {
 }
 
 type TOONToJSONOptions struct {
+	// Decode overlays the decoder defaults: non-zero IndentSize and Limits
+	// replace them. Decode.Strict is ignored; use NonStrict.
 	Decode toon.DecodeOptions
-	JSON   JSONOutputOptions
+	// NonStrict turns strict decoding off. Strict decoding is the default and
+	// stays on when Decode sets other fields.
+	NonStrict bool
+	JSON      JSONOutputOptions
 }
 
 func resolveJSONOptions(opts ...JSONOption) JSONOptions {
