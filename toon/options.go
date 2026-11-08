@@ -10,6 +10,9 @@ const (
 	Pipe  Delimiter = '|'
 )
 
+// KeyFoldingMode is retained for source compatibility only.
+//
+// Deprecated: TOON v4 has no key folding; the encoder ignores it.
 type KeyFoldingMode int
 
 const (
@@ -17,6 +20,9 @@ const (
 	KeyFoldingSafe
 )
 
+// PathExpansionMode is retained for source compatibility only.
+//
+// Deprecated: TOON v4 has no path expansion; the decoder ignores it.
 type PathExpansionMode int
 
 const (
@@ -33,18 +39,22 @@ const (
 )
 
 type EncodeOptions struct {
-	IndentSize           int
-	Delimiter            Delimiter
+	IndentSize int
+	Delimiter  Delimiter
+	// Deprecated: the #N length marker was removed from TOON; ignored.
 	IncludeLengthMarkers bool
-	KeyFolding           KeyFoldingMode
-	FlattenDepth         int
-	NumberMode           NumberMode
-	Limits               ResourceLimits
+	// Deprecated: key folding was removed from TOON; ignored.
+	KeyFolding KeyFoldingMode
+	// Deprecated: key folding was removed from TOON; ignored.
+	FlattenDepth int
+	NumberMode   NumberMode
+	Limits       ResourceLimits
 }
 
 type DecodeOptions struct {
-	IndentSize  int
-	Strict      bool
+	IndentSize int
+	Strict     bool
+	// Deprecated: path expansion was removed from TOON; ignored.
 	ExpandPaths PathExpansionMode
 	Limits      ResourceLimits
 }

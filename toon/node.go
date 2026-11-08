@@ -1,6 +1,6 @@
 package toon
 
-const SpecVersion = "3.3"
+const SpecVersion = "4.4"
 
 type Kind int
 

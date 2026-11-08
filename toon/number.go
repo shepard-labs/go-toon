@@ -52,20 +52,19 @@ func IsNumericLike(s string) bool {
 	return i == len(s)
 }
 
+// isQuotingNumericLike implements the SPEC §7.2 numeric-like test, which
+// unlike the decoder's number grammar also covers a leading plus sign.
+func isQuotingNumericLike(s string) bool {
+	if s != "" && s[0] == '+' {
+		s = s[1:]
+	}
+	return s != "" && s[0] != '-' && IsNumericLike(s)
+}
+
+// IsValidNumberToken reports whether s matches the JSON number grammar
+// (SPEC §4); it is the decoder's test for an unquoted numeric token.
 func IsValidNumberToken(s string) bool {
-	if !IsNumericLike(s) {
-		return false
-	}
-	i := 0
-	if s[i] == '-' {
-		i++
-	}
-	intStart := i
-	for i < len(s) && s[i] >= '0' && s[i] <= '9' {
-		i++
-	}
-	intPart := s[intStart:i]
-	return len(intPart) == 1 || intPart[0] != '0'
+	return isJSONNumberToken(s)
 }
 
 func CanonicalizeNumberToken(s string) string {
@@ -80,7 +79,7 @@ func DecodeNumberToken(s string) string {
 	if !IsValidNumberToken(s) {
 		return s
 	}
-	_, digits, _ := parseDecimalParts(s)
+	_, digits, _, _ := parseDecimalParts(s)
 	if trimLeadingZeros(digits) == "" {
 		return "0"
 	}
@@ -93,6 +92,9 @@ func canonicalizeNumber(s string, mode NumberMode) (string, bool, error) {
 		f, err := strconv.ParseFloat(s, 64)
 		if err != nil {
 			return "", false, Errorf(ErrInvalidInputFormat, "invalid number %q", s)
+		}
+		if _, digits, _, ok := parseDecimalParts(s); !ok && trimLeadingZeros(digits) != "" {
+			return "", false, Errorf(ErrInvalidInputFormat, "number %q is out of range", s)
 		}
 		return canonicalizeFloat64(f), false, nil
 	case NumberStringForUnsafe:
@@ -122,10 +124,16 @@ func canonicalizeLosslessNumberWithSafety(s string) (string, bool, error) {
 	if !IsValidNumberToken(s) {
 		return "", false, Errorf(ErrInvalidInputFormat, "invalid number %q", s)
 	}
-	sign, digits, power := parseDecimalParts(s)
+	sign, digits, power, ok := parseDecimalParts(s)
 	digits = trimLeadingZeros(digits)
 	if digits == "" {
 		return "0", false, nil
+	}
+	if !ok {
+		// The exponent does not fit an int32, so the value cannot be
+		// rewritten without altering it: the token is kept verbatim and
+		// treated as outside the safe range.
+		return s, true, nil
 	}
 	digits, power = trimTrailingZeroDigits(digits, power)
 	adjusted := len(digits) + power - 1
@@ -136,21 +144,28 @@ func canonicalizeLosslessNumberWithSafety(s string) (string, bool, error) {
 	return sign + exponentDecimal(digits, power), true, nil
 }
 
-func parseDecimalParts(s string) (sign string, digits string, power int) {
+// parseDecimalParts splits a valid number token into sign, digit string and
+// decimal power. ok is false when the exponent does not fit an int32; power is
+// then meaningless.
+func parseDecimalParts(s string) (sign string, digits string, power int, ok bool) {
+	ok = true
 	if strings.HasPrefix(s, "-") {
 		sign = "-"
 		s = s[1:]
 	}
 	if e := strings.IndexAny(s, "eE"); e >= 0 {
-		exp, _ := strconv.Atoi(s[e+1:])
-		power += exp
+		exp, err := strconv.ParseInt(s[e+1:], 10, 32)
+		if err != nil {
+			ok = false
+		}
+		power += int(exp)
 		s = s[:e]
 	}
 	if dot := strings.IndexByte(s, '.'); dot >= 0 {
 		power -= len(s) - dot - 1
 		s = s[:dot] + s[dot+1:]
 	}
-	return sign, s, power
+	return sign, s, power, ok
 }
 
 func trimLeadingZeros(s string) string {

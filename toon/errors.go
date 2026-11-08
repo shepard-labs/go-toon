@@ -9,6 +9,7 @@ type ErrorCode string
 
 const (
 	ErrInvalidIndent           ErrorCode = "invalid_indent"
+	ErrInvalidUTF8             ErrorCode = "invalid_utf8"
 	ErrTabIndent               ErrorCode = "tab_indent"
 	ErrInvalidEscape           ErrorCode = "invalid_escape"
 	ErrUnterminatedString      ErrorCode = "unterminated_string"
@@ -18,14 +19,15 @@ const (
 	ErrMalformedHeader         ErrorCode = "malformed_header"
 	ErrHeaderDelimiterMismatch ErrorCode = "header_delimiter_mismatch"
 	ErrMissingColon            ErrorCode = "missing_colon"
-	ErrPathExpansionConflict   ErrorCode = "path_expansion_conflict"
-	ErrResourceLimit           ErrorCode = "resource_limit"
-	ErrInvalidInputFormat      ErrorCode = "invalid_input_format"
-	ErrUnsupportedFeature      ErrorCode = "unsupported_feature"
-	ErrUnsupportedKind         ErrorCode = "unsupported_kind"
-	ErrCyclicValue             ErrorCode = "cyclic_value"
-	ErrUnmarshalType           ErrorCode = "unmarshal_type"
-	ErrNonPointerTarget        ErrorCode = "non_pointer_target"
+	// Deprecated: path expansion was removed from TOON; never produced.
+	ErrPathExpansionConflict ErrorCode = "path_expansion_conflict"
+	ErrResourceLimit         ErrorCode = "resource_limit"
+	ErrInvalidInputFormat    ErrorCode = "invalid_input_format"
+	ErrUnsupportedFeature    ErrorCode = "unsupported_feature"
+	ErrUnsupportedKind       ErrorCode = "unsupported_kind"
+	ErrCyclicValue           ErrorCode = "cyclic_value"
+	ErrUnmarshalType         ErrorCode = "unmarshal_type"
+	ErrNonPointerTarget      ErrorCode = "non_pointer_target"
 )
 
 type Error struct {

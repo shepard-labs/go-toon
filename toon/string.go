@@ -1,9 +1,7 @@
 package toon
 
 import (
-	"fmt"
 	"strings"
-	"unicode/utf16"
 )
 
 func IsValidUnquotedKey(s string) bool {
@@ -18,6 +16,9 @@ func IsValidUnquotedKey(s string) bool {
 	return true
 }
 
+// IsValidSafeSegment reports whether s is a dot-free identifier segment.
+//
+// Deprecated: it served key folding and path expansion, which TOON v4 removed.
 func IsValidSafeSegment(s string) bool {
 	if s == "" || !isAlphaUnderscore(s[0]) {
 		return false
@@ -30,29 +31,36 @@ func IsValidSafeSegment(s string) bool {
 	return true
 }
 
+// NeedsQuotes reports whether an encoder must quote s as a string value under
+// SPEC §7.2, given the document delimiter. The root-primitive U+FEFF rule is
+// position-dependent and handled by the encoder.
 func NeedsQuotes(s string, delimiter Delimiter) bool {
-	if s == "" || strings.TrimSpace(s) != s {
+	if s == "" || isSpaceOrTab(s[0]) || isSpaceOrTab(s[len(s)-1]) {
 		return true
 	}
-	lower := strings.ToLower(s)
-	if lower == "true" || lower == "false" || lower == "null" {
+	if s == "true" || s == "false" || s == "null" {
 		return true
 	}
-	if s == "-" || strings.HasPrefix(s, "-") || IsNumericLike(s) {
+	if s[0] == '-' || s[0] == '#' || isQuotingNumericLike(s) {
 		return true
 	}
-	for _, r := range s {
-		if r < 0x20 || r == ':' || r == '"' || r == '\\' || r == '[' || r == ']' || r == '{' || r == '}' || r == rune(delimiter) {
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c < 0x20 || c == ':' || c == '"' || c == '\\' || c == '[' || c == ']' || c == '{' || c == '}' || c == byte(delimiter) {
 			return true
 		}
 	}
 	return false
 }
 
+// EscapeString escapes s for use between double quotes per SPEC §7.1: the five
+// short escapes, lowercase \u00xx for other C0 controls, everything else literal.
 func EscapeString(s string) string {
 	var b strings.Builder
-	for _, r := range s {
-		switch r {
+	b.Grow(len(s))
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch c {
 		case '\\':
 			b.WriteString(`\\`)
 		case '"':
@@ -64,133 +72,20 @@ func EscapeString(s string) string {
 		case '\t':
 			b.WriteString(`\t`)
 		default:
-			if r < 0x20 {
-				b.WriteString(`\u`)
-				b.WriteString(strings.ToUpper(hex4(r)))
+			if c < 0x20 {
+				b.WriteString(`\u00`)
+				b.WriteByte("0123456789abcdef"[c>>4])
+				b.WriteByte("0123456789abcdef"[c&0xf])
 			} else {
-				b.WriteRune(r)
+				b.WriteByte(c)
 			}
 		}
 	}
 	return b.String()
 }
 
-func UnescapeQuotedToken(token string) (string, error) {
-	if token == "" || token[0] != '"' {
-		return "", NewError(ErrUnterminatedString, "quoted token must start with quote")
-	}
-	var b strings.Builder
-	for i := 1; i < len(token); i++ {
-		ch := token[i]
-		switch ch {
-		case '"':
-			if strings.TrimSpace(token[i+1:]) != "" {
-				return "", NewError(ErrInvalidEscape, "characters after closing quote")
-			}
-			return b.String(), nil
-		case '\\':
-			if i+1 >= len(token) {
-				return "", NewError(ErrInvalidEscape, "backslash at end of string")
-			}
-			i++
-			switch token[i] {
-			case '\\':
-				b.WriteByte('\\')
-			case '"':
-				b.WriteByte('"')
-			case 'n':
-				b.WriteByte('\n')
-			case 'r':
-				b.WriteByte('\r')
-			case 't':
-				b.WriteByte('\t')
-			case 'u':
-				if i+4 >= len(token) {
-					return "", NewError(ErrInvalidEscape, "truncated unicode escape")
-				}
-				r, ok := parseHex4(token[i+1 : i+5])
-				if !ok {
-					return "", NewError(ErrInvalidEscape, "non-hex unicode escape")
-				}
-				if utf16.IsSurrogate(r) {
-					return "", NewError(ErrInvalidEscape, "lone surrogate escape")
-				}
-				b.WriteRune(r)
-				i += 4
-			default:
-				return "", NewError(ErrInvalidEscape, "unknown escape")
-			}
-		default:
-			b.WriteByte(ch)
-		}
-	}
-	return "", NewError(ErrUnterminatedString, "unterminated quoted string")
-}
-
-func SplitDelimited(s string, delimiter Delimiter) ([]string, error) {
-	var tokens []string
-	start := 0
-	inQuote := false
-	escaped := false
-	for i := 0; i < len(s); i++ {
-		ch := s[i]
-		if inQuote {
-			if escaped {
-				escaped = false
-				continue
-			}
-			if ch == '\\' {
-				escaped = true
-				continue
-			}
-			if ch == '"' {
-				inQuote = false
-			}
-			continue
-		}
-		if ch == '"' {
-			inQuote = true
-			continue
-		}
-		if ch == byte(delimiter) {
-			tokens = append(tokens, strings.TrimSpace(s[start:i]))
-			start = i + 1
-		}
-	}
-	if inQuote {
-		return nil, NewError(ErrUnterminatedString, "unterminated quoted string")
-	}
-	if escaped {
-		return nil, NewError(ErrInvalidEscape, "backslash at end of string")
-	}
-	tokens = append(tokens, strings.TrimSpace(s[start:]))
-	return tokens, nil
-}
-
-func ParsePrimitiveToken(token string) (*Node, error) {
-	trimmed := strings.TrimSpace(token)
-	if trimmed == "" {
-		return &Node{Kind: StringKind, String: ""}, nil
-	}
-	if strings.HasPrefix(trimmed, "\"") {
-		s, err := UnescapeQuotedToken(trimmed)
-		if err != nil {
-			return nil, err
-		}
-		return &Node{Kind: StringKind, String: s}, nil
-	}
-	switch trimmed {
-	case "null":
-		return &Node{Kind: NullKind}, nil
-	case "true":
-		return &Node{Kind: BoolKind, Bool: true}, nil
-	case "false":
-		return &Node{Kind: BoolKind}, nil
-	}
-	if IsValidNumberToken(trimmed) {
-		return &Node{Kind: NumberKind, Number: Number{Raw: DecodeNumberToken(trimmed)}}, nil
-	}
-	return &Node{Kind: StringKind, String: trimmed}, nil
+func isSpaceOrTab(b byte) bool {
+	return b == ' ' || b == '\t'
 }
 
 func isAlphaUnderscore(b byte) bool {
@@ -203,10 +98,6 @@ func isAlphaDigitUnderscore(b byte) bool {
 
 func isAlphaDigitUnderscoreDot(b byte) bool {
 	return isAlphaDigitUnderscore(b) || b == '.'
-}
-
-func hex4(r rune) string {
-	return fmt.Sprintf("%04x", r)
 }
 
 func parseHex4(s string) (rune, bool) {

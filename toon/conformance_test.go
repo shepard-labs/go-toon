@@ -23,7 +23,7 @@ func TestConformanceEncoderGoldenMinimum(t *testing.T) {
 		{"comma delimiter", obj(field("a", arr(str("x"), str("y")))), "a[2]: x,y", nil},
 		{"tab delimiter", obj(field("a", arr(str("x"), str("y")))), "a[2\t]: x\ty", []EncodeOption{func(o *EncodeOptions) { o.Delimiter = Tab }}},
 		{"pipe delimiter", obj(field("a", arr(str("x"), str("y")))), "a[2|]: x|y", []EncodeOption{func(o *EncodeOptions) { o.Delimiter = Pipe }}},
-		{"safe key folding", obj(field("a", obj(field("b", num("1"))))), "a.b: 1", []EncodeOption{func(o *EncodeOptions) { o.KeyFolding = KeyFoldingSafe }}},
+		{"deprecated key folding is ignored", obj(field("a", obj(field("b", num("1"))))), "a:\n  b: 1", []EncodeOption{func(o *EncodeOptions) { o.KeyFolding = KeyFoldingSafe }}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) { assertEncode(t, tc.node, tc.want, tc.opts...) })
@@ -50,7 +50,6 @@ func TestConformanceDecoderStrictNegativeMinimum(t *testing.T) {
 		{"tabular row count mismatch", "a[2]{x}:\n  1", ErrArrayCountMismatch, nil},
 		{"tabular width mismatch", "a[1]{x,y}:\n  1", ErrTabularWidthMismatch, nil},
 		{"duplicate sibling key", "a: 1\na: 2", ErrDuplicateKey, nil},
-		{"path expansion conflict", "a: 1\na.b: 2", ErrPathExpansionConflict, []DecodeOption{func(o *DecodeOptions) { o.ExpandPaths = ExpandPathsSafe }}},
 		{"blank line inside array", "a[2]:\n  - 1\n  \n  - 2", ErrInvalidInputFormat, nil},
 	}
 	for _, tc := range cases {

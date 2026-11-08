@@ -3,8 +3,9 @@ package toon
 import (
 	"bytes"
 	"io"
-	"slices"
 	"strconv"
+	"strings"
+	"unicode/utf8"
 )
 
 func Encode(n *Node, opts ...EncodeOption) ([]byte, error) {
@@ -43,12 +44,24 @@ type encoder struct {
 func (e *encoder) writeRoot(n *Node) error {
 	switch n.Kind {
 	case ObjectKind:
-		fields := e.foldFields(n.Object, 0)
-		return e.writeObjectFields(fields, 0)
+		if cols, ok := keyedColumns(n.Object); ok {
+			return e.writeKeyed(nil, n.Object, cols, 0)
+		}
+		return e.writeObjectFields(n.Object, 0)
 	case ArrayKind:
-		return e.writeArray(nil, n, 0, false)
+		if len(n.Array) == 0 {
+			e.buf.WriteString("[]")
+			return nil
+		}
+		return e.writeArray(nil, n.Array, 0, true)
 	default:
-		value, err := e.primitive(n, e.opts.Delimiter)
+		var value string
+		var err error
+		if n.Kind == StringKind && strings.HasPrefix(n.String, "\uFEFF") {
+			value = quote(n.String)
+		} else {
+			value, err = e.primitive(n, e.opts.Delimiter)
+		}
 		if err != nil {
 			return err
 		}
@@ -71,66 +84,91 @@ func (e *encoder) writeObjectFields(fields []Field, depth int) error {
 
 func (e *encoder) writeField(field Field, depth int) error {
 	e.indent(depth)
+	return e.writeFieldBody(field, depth)
+}
+
+// writeFieldBody writes a field from its key onward; the caller has already
+// positioned the cursor (indentation or list-item hyphen). Any scope the field
+// opens has its content at depth+1.
+func (e *encoder) writeFieldBody(field Field, depth int) error {
 	value := field.Value
 	if value == nil {
 		value = &Node{Kind: NullKind}
 	}
 	switch value.Kind {
 	case ObjectKind:
+		if cols, ok := keyedColumns(value.Object); ok {
+			return e.writeKeyed(&field.Key, value.Object, cols, depth)
+		}
 		e.buf.WriteString(encodeKey(field.Key))
 		e.buf.WriteByte(':')
-		fields := e.foldFields(value.Object, depth+1)
-		if len(fields) == 0 {
+		if len(value.Object) == 0 {
 			return nil
 		}
 		e.buf.WriteByte('\n')
-		return e.writeObjectFields(fields, depth+1)
+		return e.writeObjectFields(value.Object, depth+1)
 	case ArrayKind:
-		return e.writeArray(&field.Key, value, depth, false)
+		if len(value.Array) == 0 {
+			e.buf.WriteString(encodeKey(field.Key))
+			e.buf.WriteString(": []")
+			return nil
+		}
+		return e.writeArray(&field.Key, value.Array, depth, true)
 	default:
-		e.buf.WriteString(encodeKey(field.Key))
 		primitive, err := e.primitive(value, e.opts.Delimiter)
 		if err != nil {
 			return err
 		}
+		e.buf.WriteString(encodeKey(field.Key))
 		e.buf.WriteString(": ")
 		e.buf.WriteString(primitive)
 		return nil
 	}
 }
 
-func (e *encoder) writeArray(key *string, n *Node, depth int, listItem bool) error {
-	if len(n.Array) == 0 {
-		if key == nil {
-			e.buf.WriteString("[]")
-		} else {
-			e.buf.WriteString(encodeKey(*key))
-			e.buf.WriteString(": []")
-		}
-		return nil
-	}
-	if allPrimitive(n.Array) {
-		e.writeHeader(key, len(n.Array), e.opts.Delimiter, nil)
+// writeKeyed writes an object in keyed tabular form: a keyed header followed
+// by one entry row per field at depth+1.
+func (e *encoder) writeKeyed(key *string, fields []Field, cols []column, depth int) error {
+	e.writeHeader(key, len(fields), true, cols)
+	e.buf.WriteByte(':')
+	for _, field := range fields {
+		e.buf.WriteByte('\n')
+		e.indent(depth + 1)
+		e.buf.WriteString(encodeKey(field.Key))
 		e.buf.WriteString(": ")
-		return e.writePrimitiveList(n.Array, e.opts.Delimiter)
+		if err := e.writeCells(field.Value.Object, cols, false); err != nil {
+			return err
+		}
 	}
-	if !listItem {
-		if fields, ok := tabularFields(n.Array); ok {
-			e.writeHeader(key, len(n.Array), e.opts.Delimiter, fields)
+	return nil
+}
+
+// writeArray writes a non-empty array whose header sits at depth, with the
+// content one level deeper. Tabular form is only available where a keyless
+// fields-bearing header is valid: with a key, or at the document root.
+func (e *encoder) writeArray(key *string, items []*Node, depth int, tabular bool) error {
+	if allPrimitive(items) {
+		e.writeHeader(key, len(items), false, nil)
+		e.buf.WriteString(": ")
+		return e.writePrimitiveList(items, e.opts.Delimiter)
+	}
+	if tabular && allNonEmptyObjects(items) {
+		if cols, ok := classifyColumns(items); ok {
+			e.writeHeader(key, len(items), false, cols)
 			e.buf.WriteByte(':')
-			for _, item := range n.Array {
+			for _, item := range items {
 				e.buf.WriteByte('\n')
 				e.indent(depth + 1)
-				if err := e.writeTabularRow(item, fields); err != nil {
+				if err := e.writeCells(item.Object, cols, false); err != nil {
 					return err
 				}
 			}
 			return nil
 		}
 	}
-	e.writeHeader(key, len(n.Array), e.opts.Delimiter, nil)
+	e.writeHeader(key, len(items), false, nil)
 	e.buf.WriteByte(':')
-	for _, item := range n.Array {
+	for _, item := range items {
 		e.buf.WriteByte('\n')
 		if err := e.writeListItem(item, depth+1); err != nil {
 			return err
@@ -147,47 +185,16 @@ func (e *encoder) writeListItem(n *Node, depth int) error {
 	e.buf.WriteByte('-')
 	switch n.Kind {
 	case ObjectKind:
-		fields := e.foldFields(n.Object, depth+1)
-		if len(fields) == 0 {
+		if len(n.Object) == 0 {
 			return nil
 		}
-		first := fields[0]
-		value := first.Value
-		if value == nil {
-			value = &Node{Kind: NullKind}
+		// The first field stands on the hyphen line but counts as depth+1,
+		// so scope content it opens lands at depth+2 (SPEC §10).
+		e.buf.WriteByte(' ')
+		if err := e.writeFieldBody(n.Object[0], depth+1); err != nil {
+			return err
 		}
-		if value.Kind == ArrayKind && len(value.Array) > 0 {
-			if tabFields, ok := tabularFields(value.Array); ok {
-				e.buf.WriteByte(' ')
-				if err := e.writeArray(&first.Key, value, depth, false); err != nil {
-					return err
-				}
-				for _, rest := range fields[1:] {
-					e.buf.WriteByte('\n')
-					if err := e.writeField(rest, depth+1); err != nil {
-						return err
-					}
-				}
-				_ = tabFields
-				return nil
-			}
-		}
-		if isPrimitive(value) {
-			primitive, err := e.primitive(value, e.opts.Delimiter)
-			if err != nil {
-				return err
-			}
-			e.buf.WriteByte(' ')
-			e.buf.WriteString(encodeKey(first.Key))
-			e.buf.WriteString(": ")
-			e.buf.WriteString(primitive)
-		} else {
-			e.buf.WriteByte('\n')
-			if err := e.writeField(first, depth+1); err != nil {
-				return err
-			}
-		}
-		for _, rest := range fields[1:] {
+		for _, rest := range n.Object[1:] {
 			e.buf.WriteByte('\n')
 			if err := e.writeField(rest, depth+1); err != nil {
 				return err
@@ -195,12 +202,13 @@ func (e *encoder) writeListItem(n *Node, depth int) error {
 		}
 		return nil
 	case ArrayKind:
-		if allPrimitive(n.Array) {
-			e.buf.WriteByte(' ')
-			return e.writeArray(nil, n, depth, true)
+		e.buf.WriteByte(' ')
+		if len(n.Array) == 0 {
+			e.writeHeader(nil, 0, false, nil)
+			e.buf.WriteByte(':')
+			return nil
 		}
-		e.buf.WriteByte('\n')
-		return e.writeArray(nil, n, depth+1, true)
+		return e.writeArray(nil, n.Array, depth, false)
 	default:
 		primitive, err := e.primitive(n, e.opts.Delimiter)
 		if err != nil {
@@ -212,28 +220,37 @@ func (e *encoder) writeListItem(n *Node, depth int) error {
 	}
 }
 
-func (e *encoder) writeHeader(key *string, length int, delimiter Delimiter, fields []string) {
+func (e *encoder) writeHeader(key *string, length int, keyed bool, cols []column) {
 	if key != nil {
 		e.buf.WriteString(encodeKey(*key))
 	}
 	e.buf.WriteByte('[')
-	if e.opts.IncludeLengthMarkers {
-		e.buf.WriteByte('#')
-	}
 	e.buf.WriteString(strconv.Itoa(length))
-	if delimiter != Comma {
-		e.buf.WriteByte(byte(delimiter))
+	if keyed {
+		e.buf.WriteByte(':')
+	}
+	if e.opts.Delimiter != Comma {
+		e.buf.WriteByte(byte(e.opts.Delimiter))
 	}
 	e.buf.WriteByte(']')
-	if len(fields) > 0 {
+	if len(cols) > 0 {
 		e.buf.WriteByte('{')
-		for i, field := range fields {
-			if i > 0 {
-				e.buf.WriteByte(byte(delimiter))
-			}
-			e.buf.WriteString(encodeKey(field))
-		}
+		e.writeFieldList(cols)
 		e.buf.WriteByte('}')
+	}
+}
+
+func (e *encoder) writeFieldList(cols []column) {
+	for i, col := range cols {
+		if i > 0 {
+			e.buf.WriteByte(byte(e.opts.Delimiter))
+		}
+		e.buf.WriteString(encodeKey(col.key))
+		if col.sub != nil {
+			e.buf.WriteByte('{')
+			e.writeFieldList(col.sub)
+			e.buf.WriteByte('}')
+		}
 	}
 }
 
@@ -251,16 +268,25 @@ func (e *encoder) writePrimitiveList(nodes []*Node, delimiter Delimiter) error {
 	return nil
 }
 
-func (e *encoder) writeTabularRow(n *Node, fields []string) error {
-	for i := range fields {
-		if i > 0 {
+// writeCells writes the leaf values of an object row in depth-first pre-order
+// of cols. started reports whether a cell was already written on this line.
+func (e *encoder) writeCells(fields []Field, cols []column, started bool) error {
+	for i, col := range cols {
+		value := fieldValue(fields, i, col.key)
+		if col.sub != nil {
+			if err := e.writeCells(value.Object, col.sub, started || i > 0); err != nil {
+				return err
+			}
+			continue
+		}
+		if started || i > 0 {
 			e.buf.WriteByte(byte(e.opts.Delimiter))
 		}
-		value, err := e.primitive(n.Object[i].Value, e.opts.Delimiter)
+		cell, err := e.primitive(value, e.opts.Delimiter)
 		if err != nil {
 			return err
 		}
-		e.buf.WriteString(value)
+		e.buf.WriteString(cell)
 	}
 	return nil
 }
@@ -278,17 +304,17 @@ func (e *encoder) primitive(n *Node, delimiter Delimiter) (string, error) {
 		}
 		return "false", nil
 	case NumberKind:
-		canonical, quote, err := canonicalizeNumber(n.Number.Raw, e.opts.NumberMode)
+		canonical, quoted, err := canonicalizeNumber(n.Number.Raw, e.opts.NumberMode)
 		if err != nil {
 			return "", err
 		}
-		if quote {
-			return `"` + EscapeString(canonical) + `"`, nil
+		if quoted {
+			return quote(canonical), nil
 		}
 		return canonical, nil
 	case StringKind:
 		if NeedsQuotes(n.String, delimiter) {
-			return `"` + EscapeString(n.String) + `"`, nil
+			return quote(n.String), nil
 		}
 		return n.String, nil
 	default:
@@ -314,6 +340,9 @@ func (e *encoder) checkNode(n *Node, depth int) error {
 	}
 	switch n.Kind {
 	case StringKind:
+		if !utf8.ValidString(n.String) {
+			return invalidUTF8Error("string value")
+		}
 		return e.limits.CheckStringBytes(len(n.String))
 	case ArrayKind:
 		if err := e.limits.CheckArrayLength(len(n.Array)); err != nil {
@@ -326,6 +355,9 @@ func (e *encoder) checkNode(n *Node, depth int) error {
 		}
 	case ObjectKind:
 		for _, field := range n.Object {
+			if !utf8.ValidString(field.Key) {
+				return invalidUTF8Error("object key")
+			}
 			if err := e.limits.CheckStringBytes(len(field.Key)); err != nil {
 				return err
 			}
@@ -337,48 +369,15 @@ func (e *encoder) checkNode(n *Node, depth int) error {
 	return nil
 }
 
-func (e *encoder) foldFields(fields []Field, depth int) []Field {
-	if e.opts.KeyFolding != KeyFoldingSafe || depth > e.opts.FlattenDepth {
-		return fields
-	}
-	literalKeys := make([]string, 0, len(fields))
-	for _, field := range fields {
-		literalKeys = append(literalKeys, field.Key)
-	}
-	result := make([]Field, 0, len(fields))
-	for _, field := range fields {
-		folded := e.foldField(field, 1)
-		if folded.Key != field.Key && containsKey(literalKeys, folded.Key) {
-			folded = field
-		}
-		result = append(result, folded)
-	}
-	return result
-}
-
-func (e *encoder) foldField(field Field, segments int) Field {
-	if segments == 1 && !IsValidSafeSegment(field.Key) {
-		return field
-	}
-	if segments >= e.opts.FlattenDepth || field.Value == nil || field.Value.Kind != ObjectKind || len(field.Value.Object) != 1 {
-		return field
-	}
-	next := field.Value.Object[0]
-	if !IsValidSafeSegment(next.Key) {
-		return field
-	}
-	folded := Field{Key: field.Key + "." + next.Key, Value: next.Value}
-	if next.Value != nil && next.Value.Kind == ObjectKind && len(next.Value.Object) == 1 && segments+1 < e.opts.FlattenDepth {
-		return e.foldField(folded, segments+1)
-	}
-	return folded
-}
-
 func encodeKey(key string) string {
 	if IsValidUnquotedKey(key) {
 		return key
 	}
-	return `"` + EscapeString(key) + `"`
+	return quote(key)
+}
+
+func quote(s string) string {
+	return `"` + EscapeString(s) + `"`
 }
 
 func allPrimitive(nodes []*Node) bool {
@@ -397,30 +396,141 @@ func isPrimitive(n *Node) bool {
 	return n == nil || n.Kind == NullKind || n.Kind == BoolKind || n.Kind == NumberKind || n.Kind == StringKind
 }
 
-func tabularFields(nodes []*Node) ([]string, bool) {
-	if len(nodes) == 0 || nodes[0] == nil || nodes[0].Kind != ObjectKind || len(nodes[0].Object) == 0 {
-		return nil, false
-	}
-	fields := make([]string, len(nodes[0].Object))
-	for i, field := range nodes[0].Object {
-		if !isPrimitive(field.Value) {
-			return nil, false
-		}
-		fields[i] = field.Key
-	}
-	for _, node := range nodes[1:] {
-		if node == nil || node.Kind != ObjectKind || len(node.Object) != len(fields) {
-			return nil, false
-		}
-		for i, field := range node.Object {
-			if field.Key != fields[i] || !isPrimitive(field.Value) {
-				return nil, false
-			}
-		}
-	}
-	return fields, true
+// invalidUTF8Error reports a string or key that is not a sequence of Unicode
+// scalar values (ill-formed UTF-8, including encoded surrogates), which TOON
+// cannot represent (SPEC §3).
+func invalidUTF8Error(what string) error {
+	return Errorf(ErrInvalidUTF8, "%s is not valid UTF-8 (ill-formed bytes or unpaired surrogate)", what)
 }
 
-func containsKey(keys []string, key string) bool {
-	return slices.Contains(keys, key)
+// column is one field of a tabular header. A column with sub set is a nested
+// field group: its values are objects sharing the sub-columns' key set.
+type column struct {
+	key string
+	sub []column
+}
+
+// classifyColumns derives the shared column tree of objs (SPEC §9.3). Every
+// element must already be a non-empty object. It reports false unless all
+// objects have the same key set and every column is uniform-primitive or
+// nested-uniform. Field order is that of the first object, at every level.
+func classifyColumns(objs []*Node) ([]column, bool) {
+	keys := objs[0].Object
+	if hasDuplicateKeys(keys) {
+		return nil, false
+	}
+	for _, o := range objs[1:] {
+		if !sameKeySet(keys, o.Object) {
+			return nil, false
+		}
+	}
+	cols := make([]column, len(keys))
+	for i, f := range keys {
+		cols[i].key = f.Key
+		primitives, objects := true, true
+		for _, o := range objs {
+			v := fieldValue(o.Object, i, f.Key)
+			primitives = primitives && isPrimitive(v)
+			objects = objects && isNonEmptyObject(v)
+		}
+		switch {
+		case primitives:
+		case objects:
+			nested := make([]*Node, len(objs))
+			for j, o := range objs {
+				nested[j] = fieldValue(o.Object, i, f.Key)
+			}
+			sub, ok := classifyColumns(nested)
+			if !ok {
+				return nil, false
+			}
+			cols[i].sub = sub
+		default:
+			return nil, false
+		}
+	}
+	return cols, true
+}
+
+// keyedColumns reports whether an object qualifies for keyed tabular form
+// (SPEC §9.5) and returns its columns.
+func keyedColumns(fields []Field) ([]column, bool) {
+	if len(fields) < 2 || hasDuplicateKeys(fields) {
+		return nil, false
+	}
+	values := make([]*Node, len(fields))
+	for i, f := range fields {
+		if !isNonEmptyObject(f.Value) {
+			return nil, false
+		}
+		values[i] = f.Value
+	}
+	return classifyColumns(values)
+}
+
+// fieldValue returns the value stored under key, trying position i first since
+// objects in a table usually share the header's field order.
+func fieldValue(fields []Field, i int, key string) *Node {
+	if i < len(fields) && fields[i].Key == key {
+		return fields[i].Value
+	}
+	for _, f := range fields {
+		if f.Key == key {
+			return f.Value
+		}
+	}
+	return nil
+}
+
+func hasDuplicateKeys(fields []Field) bool {
+	seen := make(map[string]struct{}, len(fields))
+	for _, f := range fields {
+		if _, dup := seen[f.Key]; dup {
+			return true
+		}
+		seen[f.Key] = struct{}{}
+	}
+	return false
+}
+
+// sameKeySet reports whether a and b hold the same keys in any order. a must
+// not contain duplicate keys.
+func sameKeySet(a, b []Field) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	inOrder := true
+	for i := range a {
+		if a[i].Key != b[i].Key {
+			inOrder = false
+			break
+		}
+	}
+	if inOrder {
+		return true
+	}
+	remaining := make(map[string]struct{}, len(a))
+	for _, f := range a {
+		remaining[f.Key] = struct{}{}
+	}
+	for _, f := range b {
+		if _, ok := remaining[f.Key]; !ok {
+			return false
+		}
+		delete(remaining, f.Key)
+	}
+	return true
+}
+
+func isNonEmptyObject(n *Node) bool {
+	return n != nil && n.Kind == ObjectKind && len(n.Object) > 0
+}
+
+func allNonEmptyObjects(nodes []*Node) bool {
+	for _, n := range nodes {
+		if !isNonEmptyObject(n) {
+			return false
+		}
+	}
+	return len(nodes) > 0
 }

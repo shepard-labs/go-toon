@@ -30,10 +30,10 @@ func Example_encodeOptions() {
 }
 
 func Example_decodeOptions() {
-	input := []byte("user.name: Ada\nuser.language: Go\n")
+	input := []byte("user.name: Ada\nuser.name: Grace\n")
 
 	decoded, err := toon.Decode(input, func(o *toon.DecodeOptions) {
-		o.ExpandPaths = toon.ExpandPathsSafe
+		o.Strict = false
 	})
 	if err != nil {
 		panic(err)

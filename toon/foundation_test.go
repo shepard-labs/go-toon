@@ -9,8 +9,8 @@ import (
 )
 
 func TestSpecVersion(t *testing.T) {
-	if SpecVersion != "3.3" {
-		t.Fatalf("SpecVersion = %q, want 3.3", SpecVersion)
+	if SpecVersion != "4.4" {
+		t.Fatalf("SpecVersion = %q, want 4.4", SpecVersion)
 	}
 }
 
@@ -156,6 +156,26 @@ func TestNeedsQuotesMatrix(t *testing.T) {
 		{"-", true},
 		{"-abc", true},
 		{"abc", false},
+		{"+1", true},
+		{"+1.5e-3", true},
+		{"1E5", true},
+		{"-", true},
+		{"#x", true},
+		{"a#b", false},
+		{"+", false},
+		{"+-1", false},
+		{".5", false},
+		{"1.", false},
+		{"0x10", false},
+		{"True", false},
+		{"NULL", false},
+		{"\t", true},
+		{"a\t", true},
+		{" x", false},
+		{"x ", false},
+		{"x\u007f", false},
+		{"café \U0001F600", false},
+		{"a\u0000b", true},
 	}
 	for _, tc := range cases {
 		if got := NeedsQuotes(tc.value, Comma); got != tc.want {
@@ -172,6 +192,9 @@ func TestEscapeString(t *testing.T) {
 	want := `\\\"\n\r\t\u0001é`
 	if got := EscapeString(in); got != want {
 		t.Fatalf("EscapeString = %q, want %q", got, want)
+	}
+	if got, want := EscapeString("\x00\x08\x0b\x0c\x1f\x7f\u0085 "), `\u0000\u0008\u000b\u000c\u001f`+"\x7f\u0085 "; got != want {
+		t.Fatalf("EscapeString controls = %q, want %q", got, want)
 	}
 }
 
@@ -215,8 +238,19 @@ func TestSplitDelimited(t *testing.T) {
 	if err != nil || !reflect.DeepEqual(got, []string{"a,b", "c"}) {
 		t.Fatalf("pipe SplitDelimited = %#v, %v", got, err)
 	}
-	if _, err := SplitDelimited(`"abc`, Comma); CodeOf(err) != ErrUnterminatedString {
-		t.Fatalf("unterminated split code = %q", CodeOf(err))
+	// SPEC §5.2: an unterminated quote span runs to the end of the line, so the
+	// delimiter inside it is quoted; completeness is checked when the token is decoded.
+	got, err = SplitDelimited(`"abc,d`, Comma)
+	if err != nil || !reflect.DeepEqual(got, []string{`"abc,d`}) {
+		t.Fatalf("unterminated split = %#v, %v", got, err)
+	}
+	if _, err := ParsePrimitiveToken(`"abc,d`); CodeOf(err) != ErrUnterminatedString {
+		t.Fatalf("unterminated token code = %q", CodeOf(err))
+	}
+	// SPEC §1.2/§12: only SP is trimmed; tab and NBSP are content.
+	got, err = SplitDelimited("\ta , b", Comma)
+	if err != nil || !reflect.DeepEqual(got, []string{"\ta", " b"}) {
+		t.Fatalf("non-space whitespace split = %q, %v", got, err)
 	}
 }
 
