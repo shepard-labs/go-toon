@@ -4,7 +4,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/shepard-labs/go-toon/toon.svg)](https://pkg.go.dev/github.com/shepard-labs/go-toon/toon)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/shepard-labs/go-toon)](https://github.com/shepard-labs/go-toon)
 [![TOON Spec](https://img.shields.io/badge/TOON-v3.3-blueviolet)](https://github.com/toon-format/spec/blob/main/SPEC.md)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/shepard-labs/go-toon)
+[![Ask DeepWiki](https://static.shepardlabs.com/badge.svg)](https://deepwiki.com/shepard-labs/go-toon)
 
 `go-toon` is a Go implementation of Token-Oriented Object Notation (TOON) v3.3. It provides an ordered-node library, format normalization helpers, ordered JSON output, and a `toon` CLI.
 
