@@ -233,15 +233,6 @@ func mergeEncodeOptions(dst *toon.EncodeOptions, src toon.EncodeOptions) {
 	if src.Delimiter != 0 {
 		dst.Delimiter = src.Delimiter
 	}
-	if src.IncludeLengthMarkers {
-		dst.IncludeLengthMarkers = true
-	}
-	if src.KeyFolding != 0 {
-		dst.KeyFolding = src.KeyFolding
-	}
-	if src.FlattenDepth != 0 {
-		dst.FlattenDepth = src.FlattenDepth
-	}
 	if src.NumberMode != 0 {
 		dst.NumberMode = src.NumberMode
 	}
