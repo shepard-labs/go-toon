@@ -78,13 +78,22 @@ func TestEncodeFlags(t *testing.T) {
 	if code != 0 || out != "tags[2|]: a,b|\"c|d\"" {
 		t.Fatalf("delimiter code=%d out=%q stderr=%s", code, out, stderr)
 	}
-	code, out, stderr = runCLI([]string{"encode", "--format", "json", "--key-folding", "safe", "--flatten-depth", "2"}, `{"a":{"b":{"c":1}}}`)
-	if code != 0 || out != "a.b:\n  c: 1" {
-		t.Fatalf("folding code=%d out=%q stderr=%s", code, out, stderr)
+	code, out, stderr = runCLI([]string{"encode", "--format", "json"}, `{"a":{"b":{"c":1}}}`)
+	if code != 0 || out != "a:\n  b:\n    c: 1" {
+		t.Fatalf("nested code=%d out=%q stderr=%s", code, out, stderr)
 	}
-	code, out, stderr = runCLI([]string{"encode", "--format", "json", "--length-markers"}, `{"tags":["a","b"]}`)
-	if code != 0 || out != "tags[#2]: a,b" {
-		t.Fatalf("length markers code=%d out=%q stderr=%s", code, out, stderr)
+	code, out, stderr = runCLI([]string{"encode", "--format", "json"}, `{"servers":{"a":{"h":"x","p":1},"b":{"h":"y","p":2}}}`)
+	if code != 0 || out != "servers[2:]{h,p}:\n  a: x,1\n  b: y,2" {
+		t.Fatalf("keyed tabular code=%d out=%q stderr=%s", code, out, stderr)
+	}
+	for _, removed := range []string{"--key-folding", "--flatten-depth", "--length-markers"} {
+		args := []string{"encode", "--format", "json", removed}
+		if removed != "--length-markers" {
+			args = append(args, "2")
+		}
+		if code, _, _ := runCLI(args, `{"a":1}`); code == 0 {
+			t.Fatalf("removed flag %s still accepted", removed)
+		}
 	}
 }
 
@@ -108,13 +117,21 @@ func TestEncodeYAMLAndXMLFlags(t *testing.T) {
 
 func TestDecodeFlags(t *testing.T) {
 	dir := t.TempDir()
-	in := writeTemp(t, dir, "in.toon", "a.b: 1")
-	code, out, stderr := runCLI([]string{"decode", in, "--expand-paths", "safe", "--indent", "4"}, "")
+	in := writeTemp(t, dir, "in.toon", "a:\n  b: 1")
+	code, out, stderr := runCLI([]string{"decode", in, "--indent", "4"}, "")
 	if code != 0 {
 		t.Fatalf("decode code=%d stderr=%s", code, stderr)
 	}
 	if out != "{\n    \"a\": {\n        \"b\": 1\n    }\n}" {
 		t.Fatalf("decode out = %q", out)
+	}
+	dotted := writeTemp(t, dir, "dotted.toon", "a.b: 1")
+	code, out, stderr = runCLI([]string{"decode", dotted}, "")
+	if code != 0 || out != "{\n  \"a.b\": 1\n}" {
+		t.Fatalf("dotted key code=%d out=%q stderr=%s", code, out, stderr)
+	}
+	if code, _, _ := runCLI([]string{"decode", dotted, "--expand-paths", "safe"}, ""); code == 0 {
+		t.Fatal("removed flag --expand-paths still accepted")
 	}
 	code, _, stderr = runCLI([]string{"decode", "--strict=false", "--format", "json"}, "a: 1\na: 2")
 	if code != 0 || !strings.Contains(stderr, "") {
