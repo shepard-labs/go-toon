@@ -13,6 +13,16 @@ The TOON specification this implementation follows lives at [toon-format/spec/SP
 
 The library exposes `toon.SpecVersion = "3.3"`.
 
+## Demo
+
+Try conversions in the browser:
+
+- [JSON to TOON](https://www.textformatting.com/developer-tools/json-to-toon)
+- [YAML to TOON](https://www.textformatting.com/developer-tools/yaml-to-toon)
+- [XML to TOON](https://www.textformatting.com/developer-tools/xml-to-toon)
+- [CSV to TOON](https://www.textformatting.com/developer-tools/csv-to-toon)
+- [TOON to JSON](https://www.textformatting.com/developer-tools/toon-to-json)
+
 ## Features
 
 - 🚀 **TOON v3.3 compliant** — encoder, decoder, and validator follow the [TOON spec](https://github.com/toon-format/spec/blob/main/SPEC.md).
