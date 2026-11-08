@@ -195,12 +195,9 @@ func TestXMLToTOONTool(t *testing.T) {
 
 func TestConversionToolOptionParity(t *testing.T) {
 	res, err := handleJSONToTOON(mustJSON(t, map[string]any{
-		"input":          `{"a":{"b":{"c":1}},"tags":["x","y"]}`,
-		"indent":         4,
-		"delimiter":      "pipe",
-		"length_markers": true,
-		"key_folding":    "safe",
-		"flatten_depth":  3,
+		"input":     `{"a":{"b":{"c":1}},"tags":["x","y"]}`,
+		"indent":    4,
+		"delimiter": "pipe",
 	}))
 	if err != nil {
 		t.Fatalf("handleJSONToTOON returned error: %v", err)
@@ -213,15 +210,68 @@ func TestConversionToolOptionParity(t *testing.T) {
 	wantBytes, err := toon.Encode(n, func(o *toon.EncodeOptions) {
 		o.IndentSize = 4
 		o.Delimiter = toon.Pipe
-		o.IncludeLengthMarkers = true
-		o.KeyFolding = toon.KeyFoldingSafe
-		o.FlattenDepth = 3
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if payload.TOON != string(wantBytes) {
 		t.Fatalf("option parity mismatch\nwant: %q\n got: %q", string(wantBytes), payload.TOON)
+	}
+}
+
+func TestRemovedOptionsAreNotAdvertised(t *testing.T) {
+	removed := []string{"length_markers", "key_folding", "flatten_depth", "expand_paths"}
+	for _, tl := range tools() {
+		props, _ := tl.InputSchema["properties"].(map[string]any)
+		for _, name := range removed {
+			if _, ok := props[name]; ok {
+				t.Fatalf("tool %s still advertises removed option %q", tl.Name, name)
+			}
+		}
+	}
+	for topic := range toonSpecTopics {
+		if topic == "key_folding" || topic == "path_expansion" {
+			t.Fatalf("spec topic %q should be removed", topic)
+		}
+	}
+}
+
+func TestConversionOutputUsesV4Layouts(t *testing.T) {
+	res, err := handleJSONToTOON(mustJSON(t, map[string]any{
+		"input": `{"servers":{"a":{"h":"x","p":1},"b":{"h":"y","p":2}},"rows":[{"id":1,"geo":{"lat":5,"lon":6}},{"id":2,"geo":{"lat":7,"lon":8}}]}`,
+	}))
+	if err != nil {
+		t.Fatalf("handleJSONToTOON returned error: %v", err)
+	}
+	payload := decodeTOONPayload(t, res)
+	want := "servers[2:]{h,p}:\n  a: x,1\n  b: y,2\nrows[2]{id,geo{lat,lon}}:\n  1,5,6\n  2,7,8"
+	if payload.TOON != want {
+		t.Fatalf("TOON mismatch\nwant: %q\n got: %q", want, payload.TOON)
+	}
+	if err := toon.Validate([]byte(payload.TOON)); err != nil {
+		t.Fatalf("converted output does not validate: %v", err)
+	}
+}
+
+func TestToonValidateAcceptsCommentsAndRejectsLengthMarker(t *testing.T) {
+	res, err := handleToonValidate(mustJSON(t, map[string]any{"input": "# note\na: 1"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var payload struct {
+		Valid bool `json:"valid"`
+	}
+	decodeToolPayload(t, res, &payload)
+	if !payload.Valid {
+		t.Fatalf("comment line should validate")
+	}
+	res, err = handleToonValidate(mustJSON(t, map[string]any{"input": "tags[#2]: a,b"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	decodeToolPayload(t, res, &payload)
+	if payload.Valid {
+		t.Fatalf("length marker syntax should be rejected")
 	}
 }
 
@@ -249,6 +299,25 @@ func TestEmbeddedExamplesValidate(t *testing.T) {
 	}
 }
 
+func TestErrorExplanationExamples(t *testing.T) {
+	for code, entry := range toonErrorExplanations {
+		if invalid, ok := entry["invalid_example"].(string); ok {
+			err := toon.Validate([]byte(invalid))
+			if err == nil {
+				t.Fatalf("%s: invalid_example %q validates", code, invalid)
+			}
+			if got := string(toon.CodeOf(err)); got != code {
+				t.Fatalf("%s: invalid_example %q fails with %s", code, invalid, got)
+			}
+		}
+		if fixed, ok := entry["fixed_example"].(string); ok {
+			if err := toon.Validate([]byte(fixed)); err != nil {
+				t.Fatalf("%s: fixed_example %q is invalid: %v", code, fixed, err)
+			}
+		}
+	}
+}
+
 func TestSpecExamplesValidate(t *testing.T) {
 	for topic, entry := range toonSpecTopics {
 		toonText, ok := entry["example"].(string)
@@ -258,6 +327,32 @@ func TestSpecExamplesValidate(t *testing.T) {
 		if err := toon.Validate([]byte(toonText)); err != nil {
 			t.Fatalf("spec example %q is invalid: %v", topic, err)
 		}
+	}
+}
+
+func TestExampleAndSpecTopicsCoverV4Syntax(t *testing.T) {
+	for _, topic := range []string{"keyed_tabular", "nested_field_groups", "comments"} {
+		if _, ok := toonExampleTopics[topic]; !ok {
+			t.Fatalf("missing example topic %q", topic)
+		}
+		if _, ok := toonSpecTopics[topic]; !ok {
+			t.Fatalf("missing spec topic %q", topic)
+		}
+	}
+	for _, topic := range []string{"folded_keys"} {
+		if _, ok := toonExampleTopics[topic]; ok {
+			t.Fatalf("example topic %q should be removed", topic)
+		}
+	}
+	if _, ok := toonErrorExplanations["invalid_utf8"]; !ok {
+		t.Fatalf("missing invalid_utf8 explanation")
+	}
+	if _, ok := toonErrorExplanations["path_expansion_conflict"]; ok {
+		t.Fatalf("path_expansion_conflict explanation should be removed")
+	}
+	overview, _ := toonSpecTopics["overview"]["summary"].(string)
+	if !strings.Contains(overview, "v4.4") {
+		t.Fatalf("overview should mention v4.4: %q", overview)
 	}
 }
 
@@ -298,7 +393,7 @@ func TestToonErrorExplainTool(t *testing.T) {
 }
 
 func TestToonSpecLookupTool(t *testing.T) {
-	res, err := handleToonSpecLookup(mustJSON(t, map[string]any{"topic": "path-expansion"}))
+	res, err := handleToonSpecLookup(mustJSON(t, map[string]any{"topic": "keyed-tabular"}))
 	if err != nil {
 		t.Fatalf("handleToonSpecLookup returned error: %v", err)
 	}
@@ -307,8 +402,8 @@ func TestToonSpecLookupTool(t *testing.T) {
 		Summary string `json:"summary"`
 	}
 	decodeToolPayload(t, res, &payload)
-	if payload.Topic != "path_expansion" {
-		t.Fatalf("expected path_expansion, got %q", payload.Topic)
+	if payload.Topic != "keyed_tabular" {
+		t.Fatalf("expected keyed_tabular, got %q", payload.Topic)
 	}
 	if payload.Summary == "" {
 		t.Fatalf("expected summary")

@@ -58,37 +58,29 @@ type toolResult struct {
 }
 
 type toonValidateArgs struct {
-	Input       string `json:"input"`
-	Strict      *bool  `json:"strict,omitempty"`
-	ExpandPaths string `json:"expand_paths,omitempty"`
+	Input  string `json:"input"`
+	Strict *bool  `json:"strict,omitempty"`
 }
 
 type toonToJSONArgs struct {
-	Input       string `json:"input"`
-	Strict      *bool  `json:"strict,omitempty"`
-	ExpandPaths string `json:"expand_paths,omitempty"`
-	Indent      string `json:"indent,omitempty"`
+	Input  string `json:"input"`
+	Strict *bool  `json:"strict,omitempty"`
+	Indent string `json:"indent,omitempty"`
 }
 
 type jsonToTOONArgs struct {
 	Input              string `json:"input"`
 	Indent             int    `json:"indent,omitempty"`
 	Delimiter          string `json:"delimiter,omitempty"`
-	LengthMarkers      bool   `json:"length_markers,omitempty"`
-	KeyFolding         string `json:"key_folding,omitempty"`
-	FlattenDepth       int    `json:"flatten_depth,omitempty"`
 	AllowDuplicateKeys bool   `json:"allow_duplicate_keys,omitempty"`
 }
 
 type yamlToTOONArgs struct {
-	Input         string `json:"input"`
-	Documents     string `json:"documents,omitempty"`
-	Scalars       string `json:"scalars,omitempty"`
-	Indent        int    `json:"indent,omitempty"`
-	Delimiter     string `json:"delimiter,omitempty"`
-	LengthMarkers bool   `json:"length_markers,omitempty"`
-	KeyFolding    string `json:"key_folding,omitempty"`
-	FlattenDepth  int    `json:"flatten_depth,omitempty"`
+	Input     string `json:"input"`
+	Documents string `json:"documents,omitempty"`
+	Scalars   string `json:"scalars,omitempty"`
+	Indent    int    `json:"indent,omitempty"`
+	Delimiter string `json:"delimiter,omitempty"`
 }
 
 type csvToTOONArgs struct {
@@ -100,9 +92,6 @@ type csvToTOONArgs struct {
 	RootKey         string `json:"root_key,omitempty"`
 	Indent          int    `json:"indent,omitempty"`
 	Delimiter       string `json:"delimiter,omitempty"`
-	LengthMarkers   bool   `json:"length_markers,omitempty"`
-	KeyFolding      string `json:"key_folding,omitempty"`
-	FlattenDepth    int    `json:"flatten_depth,omitempty"`
 }
 
 type xmlToTOONArgs struct {
@@ -115,9 +104,6 @@ type xmlToTOONArgs struct {
 	Namespaces         string `json:"namespaces,omitempty"`
 	Indent             int    `json:"indent,omitempty"`
 	Delimiter          string `json:"delimiter,omitempty"`
-	LengthMarkers      bool   `json:"length_markers,omitempty"`
-	KeyFolding         string `json:"key_folding,omitempty"`
-	FlattenDepth       int    `json:"flatten_depth,omitempty"`
 }
 
 type toonExamplesArgs struct {
@@ -168,10 +154,25 @@ var toonExampleTopics = map[string]map[string]any{
 		"description": "Empty arrays are explicit.",
 		"toon":        "items: []",
 	},
-	"folded_keys": {
-		"topic":       "folded_keys",
-		"description": "Dotted keys are literal unless safe path expansion is enabled by the decoder.",
+	"dotted_keys": {
+		"topic":       "dotted_keys",
+		"description": "Dotted keys are ordinary literal keys; TOON has no key folding or path expansion.",
 		"toon":        "a.b.c: 1",
+	},
+	"keyed_tabular": {
+		"topic":       "keyed_tabular",
+		"description": "An object whose entries are all objects with the same primitive fields uses a keyed tabular header `[N:]{fields}:`. Each row is `entryKey: v1,v2`.",
+		"toon":        "servers[2:]{host,port}:\n  alpha: a.example.com,8080\n  beta: b.example.com,9090",
+	},
+	"nested_field_groups": {
+		"topic":       "nested_field_groups",
+		"description": "A tabular column may be a nested object written as a group `geo{lat,lon}`; its values are flattened into the row in order.",
+		"toon":        "places[2]{id,geo{lat,lon}}:\n  1,52.5,13.4\n  2,48.9,2.35",
+	},
+	"comments": {
+		"topic":       "comments",
+		"description": "Full-line comments start with `#` after optional spaces. Decoders discard them; there are no inline comments and encoders never emit them. Values starting with `#` must be quoted.",
+		"toon":        "# service settings\nname: api\n  # port the service listens on\nport: 8080\nnote: \"#not a comment\"",
 	},
 }
 
@@ -233,14 +234,14 @@ var toonErrorExplanations = map[string]map[string]any{
 	"missing_colon": {
 		"code":            "missing_colon",
 		"meaning":         "An object field or array header is missing its colon separator.",
-		"invalid_example": "name Ada",
-		"fixed_example":   "name: Ada",
+		"invalid_example": "id: 1\nname Ada",
+		"fixed_example":   "id: 1\nname: Ada",
 	},
-	"path_expansion_conflict": {
-		"code":          "path_expansion_conflict",
-		"meaning":       "Safe path expansion would collide with an existing literal or expanded key.",
-		"likely_causes": []string{"Both a.b and a are present", "Dotted keys expand into an existing object path"},
-		"fix":           "Rename a key, keep dotted keys literal, or disable path expansion.",
+	"invalid_utf8": {
+		"code":          "invalid_utf8",
+		"meaning":       "Input or a string being encoded is not valid UTF-8 (TOON text is UTF-8 only).",
+		"likely_causes": []string{"Latin-1 or other legacy encoding", "Binary data in a string value", "Truncated multi-byte sequence", "Lone surrogate escape in a JSON source"},
+		"fix":           "Re-encode the source as UTF-8, or base64-encode binary data before converting to TOON.",
 	},
 	"resource_limit": {
 		"code":          "resource_limit",
@@ -258,7 +259,7 @@ var toonErrorExplanations = map[string]map[string]any{
 		"code":          "unsupported_feature",
 		"meaning":       "The requested syntax or option is not supported by go-toon.",
 		"likely_causes": []string{"Using syntax from another format", "Requesting a CLI or converter mode not implemented"},
-		"fix":           "Use supported TOON v3.3 syntax and go-toon options.",
+		"fix":           "Use supported TOON v4.4 syntax and go-toon options.",
 	},
 	"unsupported_kind": {
 		"code":    "unsupported_kind",
@@ -285,8 +286,8 @@ var toonErrorExplanations = map[string]map[string]any{
 var toonSpecTopics = map[string]map[string]any{
 	"overview": {
 		"topic":   "overview",
-		"summary": "TOON is an ordered object notation. go-toon implements TOON v3.3 with ordered nodes, deterministic encoding, strict decode defaults, and safe format normalization.",
-		"rules":   []string{"Preserve field order", "Validate non-trivial hand-written TOON", "Do not assume YAML, JSON, CSV, or markdown syntax applies"},
+		"summary": "TOON is an ordered object notation. go-toon implements TOON v4.4 with ordered nodes, deterministic encoding, strict decode defaults, and safe format normalization.",
+		"rules":   []string{"Preserve field order", "Validate non-trivial hand-written TOON", "Do not assume YAML, JSON, CSV, or markdown syntax applies", "There is no key folding, path expansion, or length marker syntax"},
 	},
 	"objects": {
 		"topic":   "objects",
@@ -313,15 +314,30 @@ var toonSpecTopics = map[string]map[string]any{
 		"summary": "go-toon preserves decoded number tokens losslessly by default through `toon.Number.Raw`. Canonical encoding may normalize number spelling.",
 		"example": "count: 42\nprice: 9.99",
 	},
-	"key_folding": {
-		"topic":   "key_folding",
-		"summary": "Safe key folding is an encoder option that can flatten nested single-field objects into dotted keys when it will not collide with literal keys.",
-		"example": "a.b.c: 1",
+	"keyed_tabular": {
+		"topic":   "keyed_tabular",
+		"summary": "An object whose entries are all objects sharing the same primitive fields is written with a keyed tabular header `key[N:]{fields}:` (the colon after the count marks entry keys). Each of the N rows is `entryKey: v1,v2`. Entry key order is preserved; the first entry decides the column order.",
+		"example": "servers[2:]{host,port}:\n  alpha: a,1\n  beta: b,2",
 	},
-	"path_expansion": {
-		"topic":   "path_expansion",
-		"summary": "Safe path expansion is a decoder option. Dotted keys are literal unless expansion is explicitly enabled.",
-		"example": "a.b: 1",
+	"nested_field_groups": {
+		"topic":   "nested_field_groups",
+		"summary": "Tabular headers may nest object columns as groups, such as `geo{lat,lon}`. Row values are the flattened leaf values in header order, so an array of uniformly nested objects stays tabular.",
+		"example": "rows[2]{id,geo{lat,lon}}:\n  1,5,6\n  2,7,8",
+	},
+	"comments": {
+		"topic":   "comments",
+		"summary": "A line whose first non-space character is `#` is a comment: decoders strip it before parsing and it never counts as a row, item, or blank line. Comments are full-line only (no trailing comments) and encoders do not emit them. Strings that start with `#` are quoted on output.",
+		"example": "# settings\nname: api\nport: 8080",
+	},
+	"list_items": {
+		"topic":   "list_items",
+		"summary": "Arrays that cannot be inline or tabular use `- ` list items. For an object item the first field sits on the hyphen line and the remaining fields are indented one level below the hyphen; an empty object item is a bare `-`.",
+		"example": "items[2]:\n  - id: 1\n    tags[2]: a,b\n  - id: 2\n    tags: []",
+	},
+	"dotted_keys": {
+		"topic":   "dotted_keys",
+		"summary": "Dotted keys such as `a.b` are plain literal keys. TOON has no key folding (encoder) or path expansion (decoder).",
+		"example": "a.b.c: 1",
 	},
 	"validation": {
 		"topic":   "validation",
@@ -401,19 +417,17 @@ func tools() []tool {
 			Name:        "toon_validate",
 			Description: "Validate TOON input with go-toon's decoder and return structured validity and parser error details.",
 			InputSchema: objectSchema(map[string]any{
-				"input":        map[string]any{"type": "string", "description": "TOON document to validate."},
-				"strict":       map[string]any{"type": "boolean", "description": "Whether strict decode is enabled. Defaults to true."},
-				"expand_paths": map[string]any{"type": "string", "enum": []string{"off", "safe"}, "description": "Path expansion mode. Defaults to off."},
+				"input":  map[string]any{"type": "string", "description": "TOON document to validate."},
+				"strict": map[string]any{"type": "boolean", "description": "Whether strict decode is enabled. Defaults to true."},
 			}, []string{"input"}),
 		},
 		{
 			Name:        "toon_to_json",
 			Description: "Decode TOON and return ordered JSON for inspection or downstream use.",
 			InputSchema: objectSchema(map[string]any{
-				"input":        map[string]any{"type": "string", "description": "TOON document to decode."},
-				"strict":       map[string]any{"type": "boolean", "description": "Whether strict decode is enabled. Defaults to true."},
-				"expand_paths": map[string]any{"type": "string", "enum": []string{"off", "safe"}, "description": "Path expansion mode. Defaults to off."},
-				"indent":       map[string]any{"type": "string", "description": "JSON indentation string. Defaults to two spaces."},
+				"input":  map[string]any{"type": "string", "description": "TOON document to decode."},
+				"strict": map[string]any{"type": "boolean", "description": "Whether strict decode is enabled. Defaults to true."},
+				"indent": map[string]any{"type": "string", "description": "JSON indentation string. Defaults to two spaces."},
 			}, []string{"input"}),
 		},
 		{
@@ -423,9 +437,6 @@ func tools() []tool {
 				"input":                map[string]any{"type": "string", "description": "JSON document to convert."},
 				"indent":               map[string]any{"type": "integer", "description": "TOON indent size. Defaults to 2."},
 				"delimiter":            map[string]any{"type": "string", "enum": []string{"comma", "tab", "pipe"}, "description": "Array delimiter. Defaults to comma."},
-				"length_markers":       map[string]any{"type": "boolean", "description": "Emit # length markers in array headers."},
-				"key_folding":          map[string]any{"type": "string", "enum": []string{"off", "safe"}, "description": "Key folding mode. Defaults to off."},
-				"flatten_depth":        map[string]any{"type": "integer", "description": "Maximum safe key folding depth."},
 				"allow_duplicate_keys": map[string]any{"type": "boolean", "description": "Allow duplicate JSON object keys by keeping the last value. Defaults to false."},
 			}, []string{"input"}),
 		},
@@ -433,14 +444,11 @@ func tools() []tool {
 			Name:        "yaml_to_toon",
 			Description: "Convert YAML to canonical TOON through go-toon's YAML normalizer and encoder.",
 			InputSchema: objectSchema(map[string]any{
-				"input":          map[string]any{"type": "string", "description": "YAML document to convert."},
-				"documents":      map[string]any{"type": "string", "enum": []string{"error", "array"}, "description": "Multiple-document handling. Defaults to error."},
-				"scalars":        map[string]any{"type": "string", "enum": []string{"core", "string"}, "description": "YAML scalar mode. Defaults to core."},
-				"indent":         map[string]any{"type": "integer", "description": "TOON indent size. Defaults to 2."},
-				"delimiter":      map[string]any{"type": "string", "enum": []string{"comma", "tab", "pipe"}, "description": "Array delimiter. Defaults to comma."},
-				"length_markers": map[string]any{"type": "boolean", "description": "Emit # length markers in array headers."},
-				"key_folding":    map[string]any{"type": "string", "enum": []string{"off", "safe"}, "description": "Key folding mode. Defaults to off."},
-				"flatten_depth":  map[string]any{"type": "integer", "description": "Maximum safe key folding depth."},
+				"input":     map[string]any{"type": "string", "description": "YAML document to convert."},
+				"documents": map[string]any{"type": "string", "enum": []string{"error", "array"}, "description": "Multiple-document handling. Defaults to error."},
+				"scalars":   map[string]any{"type": "string", "enum": []string{"core", "string"}, "description": "YAML scalar mode. Defaults to core."},
+				"indent":    map[string]any{"type": "integer", "description": "TOON indent size. Defaults to 2."},
+				"delimiter": map[string]any{"type": "string", "enum": []string{"comma", "tab", "pipe"}, "description": "Array delimiter. Defaults to comma."},
 			}, []string{"input"}),
 		},
 		{
@@ -455,9 +463,6 @@ func tools() []tool {
 				"root_key":          map[string]any{"type": "string", "description": "Optional object key to wrap the resulting array."},
 				"indent":            map[string]any{"type": "integer", "description": "TOON indent size. Defaults to 2."},
 				"delimiter":         map[string]any{"type": "string", "enum": []string{"comma", "tab", "pipe"}, "description": "TOON array delimiter. Defaults to comma."},
-				"length_markers":    map[string]any{"type": "boolean", "description": "Emit # length markers in array headers."},
-				"key_folding":       map[string]any{"type": "string", "enum": []string{"off", "safe"}, "description": "Key folding mode. Defaults to off."},
-				"flatten_depth":     map[string]any{"type": "integer", "description": "Maximum safe key folding depth."},
 			}, []string{"input"}),
 		},
 		{
@@ -473,9 +478,6 @@ func tools() []tool {
 				"namespaces":           map[string]any{"type": "string", "enum": []string{"local", "qualified", "uri"}, "description": "Namespace rendering. Defaults to local."},
 				"indent":               map[string]any{"type": "integer", "description": "TOON indent size. Defaults to 2."},
 				"delimiter":            map[string]any{"type": "string", "enum": []string{"comma", "tab", "pipe"}, "description": "TOON array delimiter. Defaults to comma."},
-				"length_markers":       map[string]any{"type": "boolean", "description": "Emit # length markers in array headers."},
-				"key_folding":          map[string]any{"type": "string", "enum": []string{"off", "safe"}, "description": "Key folding mode. Defaults to off."},
-				"flatten_depth":        map[string]any{"type": "integer", "description": "Maximum safe key folding depth."},
 			}, []string{"input"}),
 		},
 		{
@@ -494,9 +496,9 @@ func tools() []tool {
 		},
 		{
 			Name:        "toon_spec_lookup",
-			Description: "Return a concise TOON v3.3 reference note for a syntax or behavior topic.",
+			Description: "Return a concise TOON v4.4 reference note for a syntax or behavior topic.",
 			InputSchema: objectSchema(map[string]any{
-				"topic": map[string]any{"type": "string", "description": "Topic such as objects, arrays, tabular_arrays, strings, numbers, key_folding, path_expansion, validation, or security."},
+				"topic": map[string]any{"type": "string", "description": "Topic such as objects, arrays, tabular_arrays, strings, numbers, keyed_tabular, nested_field_groups, comments, list_items, dotted_keys, validation, or security."},
 			}, []string{"topic"}),
 		},
 	}
@@ -548,11 +550,8 @@ func handleToonValidate(raw json.RawMessage) (toolResult, error) {
 	if err := json.Unmarshal(raw, &args); err != nil {
 		return toolResult{}, err
 	}
-	decodeOpts, err := decodeOptions(args.Strict, args.ExpandPaths)
-	if err != nil {
-		return toolResult{}, err
-	}
-	err = toon.Validate([]byte(args.Input), func(o *toon.DecodeOptions) { *o = decodeOpts })
+	decodeOpts := decodeOptions(args.Strict)
+	err := toon.Validate([]byte(args.Input), func(o *toon.DecodeOptions) { *o = decodeOpts })
 	if err != nil {
 		return jsonToolResult(map[string]any{
 			"valid": false,
@@ -567,10 +566,7 @@ func handleToonToJSON(raw json.RawMessage) (toolResult, error) {
 	if err := json.Unmarshal(raw, &args); err != nil {
 		return toolResult{}, err
 	}
-	decodeOpts, err := decodeOptions(args.Strict, args.ExpandPaths)
-	if err != nil {
-		return toolResult{}, err
-	}
+	decodeOpts := decodeOptions(args.Strict)
 	n, err := toon.Decode([]byte(args.Input), func(o *toon.DecodeOptions) { *o = decodeOpts })
 	if err != nil {
 		return jsonToolResult(map[string]any{
@@ -607,11 +603,8 @@ func handleJSONToTOON(raw json.RawMessage) (toolResult, error) {
 		})
 	}
 	encodeOpts, err := encodeOptions(encodeArgs{
-		Indent:        args.Indent,
-		Delimiter:     args.Delimiter,
-		LengthMarkers: args.LengthMarkers,
-		KeyFolding:    args.KeyFolding,
-		FlattenDepth:  args.FlattenDepth,
+		Indent:    args.Indent,
+		Delimiter: args.Delimiter,
 	})
 	if err != nil {
 		return toolResult{}, err
@@ -650,11 +643,8 @@ func handleYAMLToTOON(raw json.RawMessage) (toolResult, error) {
 		return invalidToolResult(err)
 	}
 	return encodeNodeToolResult(n, encodeArgs{
-		Indent:        args.Indent,
-		Delimiter:     args.Delimiter,
-		LengthMarkers: args.LengthMarkers,
-		KeyFolding:    args.KeyFolding,
-		FlattenDepth:  args.FlattenDepth,
+		Indent:    args.Indent,
+		Delimiter: args.Delimiter,
 	})
 }
 
@@ -688,11 +678,8 @@ func handleCSVToTOON(raw json.RawMessage) (toolResult, error) {
 		n = &toon.Node{Kind: toon.ObjectKind, Object: []toon.Field{{Key: args.RootKey, Value: n}}}
 	}
 	return encodeNodeToolResult(n, encodeArgs{
-		Indent:        args.Indent,
-		Delimiter:     args.Delimiter,
-		LengthMarkers: args.LengthMarkers,
-		KeyFolding:    args.KeyFolding,
-		FlattenDepth:  args.FlattenDepth,
+		Indent:    args.Indent,
+		Delimiter: args.Delimiter,
 	})
 }
 
@@ -737,11 +724,8 @@ func handleXMLToTOON(raw json.RawMessage) (toolResult, error) {
 		return invalidToolResult(err)
 	}
 	return encodeNodeToolResult(n, encodeArgs{
-		Indent:        args.Indent,
-		Delimiter:     args.Delimiter,
-		LengthMarkers: args.LengthMarkers,
-		KeyFolding:    args.KeyFolding,
-		FlattenDepth:  args.FlattenDepth,
+		Indent:    args.Indent,
+		Delimiter: args.Delimiter,
 	})
 }
 
@@ -789,11 +773,8 @@ func handleToonSpecLookup(raw json.RawMessage) (toolResult, error) {
 }
 
 type encodeArgs struct {
-	Indent        int
-	Delimiter     string
-	LengthMarkers bool
-	KeyFolding    string
-	FlattenDepth  int
+	Indent    int
+	Delimiter string
 }
 
 func encodeNodeToolResult(n *toon.Node, args encodeArgs) (toolResult, error) {
@@ -818,20 +799,12 @@ func invalidToolResult(err error) (toolResult, error) {
 	})
 }
 
-func decodeOptions(strict *bool, expandPaths string) (toon.DecodeOptions, error) {
+func decodeOptions(strict *bool) toon.DecodeOptions {
 	o := toon.DefaultDecodeOptions()
 	if strict != nil {
 		o.Strict = *strict
 	}
-	switch expandPaths {
-	case "", "off":
-		o.ExpandPaths = toon.ExpandPathsOff
-	case "safe":
-		o.ExpandPaths = toon.ExpandPathsSafe
-	default:
-		return o, fmt.Errorf("unsupported expand_paths %q", expandPaths)
-	}
-	return o, nil
+	return o
 }
 
 func encodeOptions(args encodeArgs) (toon.EncodeOptions, error) {
@@ -848,18 +821,6 @@ func encodeOptions(args encodeArgs) (toon.EncodeOptions, error) {
 		o.Delimiter = toon.Pipe
 	default:
 		return o, fmt.Errorf("unsupported delimiter %q", args.Delimiter)
-	}
-	o.IncludeLengthMarkers = args.LengthMarkers
-	switch args.KeyFolding {
-	case "", "off":
-		o.KeyFolding = toon.KeyFoldingOff
-	case "safe":
-		o.KeyFolding = toon.KeyFoldingSafe
-	default:
-		return o, fmt.Errorf("unsupported key_folding %q", args.KeyFolding)
-	}
-	if args.FlattenDepth != 0 {
-		o.FlattenDepth = args.FlattenDepth
 	}
 	return o, nil
 }
