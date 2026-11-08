@@ -1,7 +1,6 @@
 # go-toon
 
 [![CI](https://github.com/shepard-labs/go-toon/actions/workflows/ci.yml/badge.svg)](https://github.com/shepard-labs/go-toon/actions/workflows/ci.yml)
-[![coverage](https://img.shields.io/endpoint?url=https://shepard-labs.github.io/go-toon/coverage/endpoint.json)](https://github.com/shepard-labs/go-toon/actions/workflows/ci.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/shepard-labs/go-toon/toon.svg)](https://pkg.go.dev/github.com/shepard-labs/go-toon/toon)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/shepard-labs/go-toon)](https://github.com/shepard-labs/go-toon)
 [![TOON Spec](https://img.shields.io/badge/TOON-v3.3-blueviolet)](https://github.com/toon-format/spec/blob/main/SPEC.md)
